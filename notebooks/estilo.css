@@ -1,0 +1,74 @@
+/* Tema oscuro del notebook: fondo negro con degradé en los costados, grises y blanco.
+   Lo carga marimo.App(css_file="estilo.css"); el modo oscuro se fuerza en el
+   encabezado de explorar.py ([tool.marimo.display]). */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+:root {
+  --marimo-text-font: "Inter", system-ui, sans-serif;
+  --marimo-heading-font: "Inter", system-ui, sans-serif;
+  --marimo-monospace-font: "JetBrains Mono", ui-monospace, monospace;
+
+  --superficie: rgba(18, 18, 20, 0.92);
+  --borde: rgba(255, 255, 255, 0.09);
+  --texto: #fafafa;
+  --texto-suave: #a1a1aa;
+}
+
+/* Fondo: negro, con un degradé gris suave que entra desde los costados. */
+#App {
+  background-color: #000;
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.03) 14%, transparent 26%, transparent 74%, rgba(255, 255, 255, 0.03) 86%, rgba(255, 255, 255, 0.13) 100%);
+  background-attachment: fixed;
+}
+
+/* Celdas de código: tarjetas gris carbón con borde fino. */
+#App .marimo-cell {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* Las celdas de texto (código oculto, marimo las marca "borderless") van sin tarjeta. */
+#App .marimo-cell.borderless {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+#App .cm-editor,
+#App .cm-gutters {
+  background: transparent !important;
+}
+
+/* Títulos en blanco; subtítulos con una barra gris al costado. */
+#App .markdown h1 {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--texto);
+}
+
+#App .markdown h2 {
+  font-weight: 600;
+  color: var(--texto);
+  padding-left: 0.6rem;
+  border-left: 3px solid #71717a;
+}
+
+#App .markdown p,
+#App .markdown li {
+  color: var(--texto-suave);
+}
+
+#App .markdown strong {
+  color: var(--texto);
+}
+
+#App .markdown code {
+  color: #e4e4e7;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  padding: 0.05em 0.35em;
+}

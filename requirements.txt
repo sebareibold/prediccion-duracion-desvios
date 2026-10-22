@@ -1,0 +1,7 @@
+marimo
+polars
+altair
+tzdata
+numpy
+scikit-learn
+python-dotenv

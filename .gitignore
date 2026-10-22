@@ -1,0 +1,22 @@
+# Repo público: lista blanca. Se ignora todo y se sube solo lo nombrado acá.
+# Nunca se suben: data/ (dataset privado de Tecfield), .env, .venv/, references/ (papers con
+# derechos de las editoriales), privado/ (reuniones, chats, descargas) ni cachés de marimo.
+
+/*
+!/.gitignore
+!/README.md
+!/requirements.txt
+!/.env.example
+!/Abrir notebook.bat
+
+!/notebooks/
+/notebooks/*
+!/notebooks/*.py
+!/notebooks/estilo.css
+
+!/data/
+/data/*
+!/data/README.md
+
+!/docs/
+!/reports/
