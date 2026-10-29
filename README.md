@@ -32,7 +32,8 @@ predecir en ese momento (*T₀*) **cuántos segundos va a durar el desvío**, co
 │   └── raw/                         los tres JSON de Tecfield, sin modificar
 ├── docs/
 │   ├── enunciados/                  consigna de la cátedra y enunciado de Tecfield
-│   └── diagramas/                   modelo de datos, cómo nace un desvío, línea de tiempo
+│   ├── diagramas/                   modelo de datos, cómo nace un desvío, línea de tiempo
+│   └── guias/                       explicación paso a paso del corpus y de cada modelo
 ├── reports/                         entregas: primera entrega, informe de avance, plan de trabajo
 └── references/                      papers de trabajos relacionados (no se suben)
 ```

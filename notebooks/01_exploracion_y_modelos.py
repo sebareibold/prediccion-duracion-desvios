@@ -73,9 +73,14 @@ def _(alt, json, load_dotenv, mo, os, pl):
 
     @alt.theme.register("tp1_oscuro", enable=True)
     def _tema():
-        # Gráficos sin panel de fondo, en la paleta gris de estilo.css.
+        """Tema de Altair para todos los gráficos del notebook.
+
+        Devuelve un ThemeConfig con fondo transparente y ejes, leyendas y títulos en grises,
+        para que combinen con el tema oscuro de estilo.css.
+        """
         gris_suave = "#a1a1aa"
         gris_linea = "rgba(255, 255, 255, 0.08)"
+        # Mismo estilo para etiquetas, títulos y líneas de todos los ejes.
         ejes = {
             "labelColor": gris_suave,
             "titleColor": gris_suave,
@@ -83,6 +88,7 @@ def _(alt, json, load_dotenv, mo, os, pl):
             "domainColor": gris_linea,
             "tickColor": gris_linea,
         }
+        # "transparent" en fondo y borde de la vista deja ver el color de la página.
         return alt.theme.ThemeConfig(
             {
                 "config": {
@@ -96,35 +102,60 @@ def _(alt, json, load_dotenv, mo, os, pl):
         )
 
     def iter_docs(nombre):
-        """Recorre un export de Mongo: un documento JSON por línea dentro de un array."""
+        """Recorre un export de Mongo y devuelve de a un documento (dict) por vez.
+
+        El archivo es un array JSON con un documento por línea. Se lee línea a línea en vez de
+        cargar todo con json.load, porque los archivos pesan hasta 1,5 GB.
+
+        nombre: archivo dentro de la carpeta DATOS (por ejemplo "hojaDeRuta.json").
+        """
         with open(DATOS / nombre, encoding="utf-8") as archivo:
             for linea in archivo:
+                # Cada línea termina en coma salvo la última: se saca para poder parsearla sola.
                 linea = linea.rstrip().rstrip(",")
+                # "[" y "]" son los bordes del array y no son documentos.
                 if linea in ("[", "]", ""):
                     continue
                 yield json.loads(linea)
 
     def unwrap(valor):
-        """Convierte {"$oid": ...} o {"$date": ...} en el valor plano."""
+        """Convierte {"$oid": ...} o {"$date": ...} en el valor plano.
+
+        mongoexport guarda ids y fechas envueltos en un diccionario. Cualquier otro valor
+        (texto, número, None) vuelve sin cambios.
+        """
         if isinstance(valor, dict):
+            # Un documento trae "$date" o "$oid", nunca los dos.
             return valor.get("$date") or valor.get("$oid")
         return valor
 
     def a_hora_local(*columnas):
-        """Pasa columnas de texto en UTC a fecha y hora de Argentina."""
+        """Devuelve una expresión de polars por columna, pasada de UTC a hora de Argentina.
+
+        columnas: nombres de columnas de texto con fechas ISO en UTC. Con strict=False una fecha
+        inválida queda como nulo en lugar de cortar la carga.
+        """
         expresiones = []
         for columna in columnas:
+            # Primero se declara que el texto está en UTC y recién después se convierte a UTC-3.
             fecha_utc = pl.col(columna).str.to_datetime(strict=False, time_zone="UTC")
             expresiones.append(fecha_utc.dt.convert_time_zone(TZ))
         return expresiones
 
     def barras(df, x, y, titulo, horizontal=False):
-        """Gráfico de barras simple; horizontal para categorías con nombres largos."""
+        """Gráfico de barras de Altair, con tooltip de las dos columnas.
+
+        df: DataFrame de polars. x e y: columnas con su tipo de Altair (por ejemplo "mes:T").
+        titulo: título del gráfico. horizontal: True para categorías con nombres largos,
+        que quedan legibles y ordenadas de mayor a menor.
+        """
         if horizontal:
+            # Se intercambian los ejes: las categorías van en y, ordenadas por el valor de x.
             codificacion = {
                 "y": alt.Y(x, sort="-x", title=None),
                 "x": alt.X(y, title=None),
             }
+            # Alto proporcional a la cantidad de barras, con un tope de 400 px.
             alto = min(400, 22 * df.height)
         else:
             codificacion = {
@@ -176,9 +207,14 @@ def _(mo):
 @app.cell
 def _(iter_docs, pl, unwrap):
     def _contar_elementos(documento, claves):
-        """Suma el largo de varias listas del documento (las que falten cuentan 0)."""
+        """Suma el largo de varias listas del documento (las que falten cuentan 0).
+
+        documento: una hoja de ruta (dict). claves: nombres de los campos que son listas,
+        por ejemplo las paradas de ida, vuelta y alternativa.
+        """
         total = 0
         for clave in claves:
+            # "or []" cubre tanto el campo ausente como el campo en null.
             total += len(documento.get(clave) or [])
         return total
 
@@ -662,24 +698,36 @@ def _(EN_ARGENTINA, desv, hdr, pl, ras):
     TOPE_S = 4 * 3600
 
     def _distancia_m(lat1, lon1, lat2, lon2):
-        """Distancia en metros entre dos puntos (fórmula del haversine)."""
+        """Distancia en metros entre dos puntos (fórmula del haversine).
+
+        Recibe columnas (expresiones de polars) de latitud y longitud en grados y calcula la
+        distancia sobre la superficie de la esfera, fila por fila.
+        """
         radio_tierra_m = 6_371_000
+        # Latitudes en radianes y diferencias entre los dos puntos.
         fi1 = lat1.radians()
         fi2 = lat2.radians()
         delta_fi = fi2 - fi1
         delta_lambda = (lon2 - lon1).radians()
 
+        # "a" es el cuadrado de la mitad de la cuerda entre los dos puntos.
         a = (delta_fi / 2).sin() ** 2 + fi1.cos() * fi2.cos() * (delta_lambda / 2).sin() ** 2
         return 2 * radio_tierra_m * a.sqrt().arcsin()
 
     def _rumbo(lat1, lon1, lat2, lon2):
-        """Rumbo en grados (0 = norte, 90 = este) para ir del punto 1 al punto 2."""
+        """Rumbo en grados (0 = norte, 90 = este) para ir del punto 1 al punto 2.
+
+        Recibe columnas (expresiones de polars) de latitud y longitud en grados. Es el rumbo
+        inicial del círculo máximo entre los dos puntos.
+        """
         fi1 = lat1.radians()
         fi2 = lat2.radians()
         delta_lambda = (lon2 - lon1).radians()
 
+        # Componentes este (y) y norte (x) del desplazamiento.
         x = fi1.cos() * fi2.sin() - fi1.sin() * fi2.cos() * delta_lambda.cos()
         y = delta_lambda.sin() * fi2.cos()
+        # arctan2 da de -180° a 180°: se suma 360 y se toma el resto para quedar en 0°–360°.
         return (pl.arctan2(y, x).degrees() + 360) % 360
 
     # 1) Lecturas válidas.
@@ -996,35 +1044,49 @@ def _(CATEGORICOS, corpus, pl):
     BASELINE = "Mediana (baseline)"
 
     def _matriz(atributos):
-        """Corpus como matriz numérica: categóricos a códigos 0..k-1 y booleanos a 0/1."""
+        """Corpus como matriz numérica: categóricos a códigos 0..k-1 y booleanos a 0/1.
+
+        atributos: lista de nombres de columnas del corpus. Devuelve un arreglo de NumPy con una
+        fila por evento y una columna por atributo, en el mismo orden que la lista.
+        """
         columnas = []
         for atributo in atributos:
             if atributo in CATEGORICOS:
+                # rank("dense") numera las categorías 1..k; se resta 1 para tener 0..k-1.
                 # Los nulos quedan como NaN.
                 codigo = pl.col(atributo).cast(pl.String).rank("dense") - 1
                 columnas.append(codigo.cast(pl.Float64))
             else:
+                # Los booleanos pasan a 0/1 y los enteros a decimal.
                 columnas.append(pl.col(atributo).cast(pl.Float64))
         return corpus.select(columnas).to_numpy()
 
     def _modelos(atributos):
-        """Modelos nuevos (sin entrenar), con semilla fija para que los resultados se repitan."""
+        """Modelos nuevos (sin entrenar), con semilla fija para que los resultados se repitan.
+
+        atributos: lista de columnas usadas, para avisarle al gradient boosting cuáles son
+        categóricas. Devuelve un diccionario {nombre: modelo}.
+        """
+        # Una marca por columna, en el mismo orden que la matriz de _matriz.
         es_categorico = []
         for atributo in atributos:
             es_categorico.append(atributo in CATEGORICOS)
 
         return {
+            # Profundidad y hoja mínima limitadas para que el árbol no memorice.
             "Árbol de decisión": DecisionTreeRegressor(
                 max_depth=8,
                 min_samples_leaf=30,
                 random_state=0,
             ),
+            # Promedio de 200 árboles; n_jobs=-1 usa todos los núcleos.
             "Random Forest": RandomForestRegressor(
                 n_estimators=200,
                 min_samples_leaf=10,
                 n_jobs=-1,
                 random_state=0,
             ),
+            # Con categorical_features el modelo trata esas columnas como categorías, no como orden.
             "Gradient boosting": HistGradientBoostingRegressor(
                 categorical_features=es_categorico,
                 random_state=0,
@@ -1034,7 +1096,9 @@ def _(CATEGORICOS, corpus, pl):
     def evaluar(atributos, solo=None):
         """Predicciones fuera de muestra (GroupKFold por vehículo) y métricas en minutos.
 
-        Con `solo` se evalúa un único modelo además del baseline.
+        atributos: lista de columnas del corpus que usan los modelos. Con `solo` se evalúa un
+        único modelo además del baseline. Devuelve un DataFrame con una fila por modelo y las
+        columnas MAE, error mediano y mejora del MAE respecto de la mediana.
         """
         X = _matriz(atributos)
         y = corpus["y"].to_numpy()
@@ -1045,14 +1109,19 @@ def _(CATEGORICOS, corpus, pl):
         else:
             nombres = [solo]
 
+        # Un arreglo por modelo, con una predicción por evento: cada evento se predice una sola
+        # vez, cuando su vehículo cae en la partición de prueba.
         predicciones = {BASELINE: np.empty_like(y, dtype=float)}
         for nombre in nombres:
             predicciones[nombre] = np.empty_like(y, dtype=float)
 
+        # GroupKFold reparte los vehículos (no los eventos) en 5 particiones.
         particiones = GroupKFold(n_splits=5).split(X, y, vehiculos)
         for entrenamiento, prueba in particiones:
+            # Baseline: la mediana de duración del entrenamiento, igual para todos.
             predicciones[BASELINE][prueba] = np.median(y[entrenamiento])
 
+            # Modelos nuevos en cada partición, para no arrastrar lo aprendido de la anterior.
             modelos = _modelos(atributos)
             for nombre in nombres:
                 modelo = modelos[nombre]
@@ -1062,6 +1131,7 @@ def _(CATEGORICOS, corpus, pl):
 
         error_baseline = np.abs(predicciones[BASELINE] - y).mean()
 
+        # Métricas por modelo, en minutos. La mejora es 1 - MAE del modelo / MAE de la mediana.
         filas = []
         for nombre, prediccion in predicciones.items():
             error = np.abs(prediccion - y)
