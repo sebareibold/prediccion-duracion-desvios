@@ -63,9 +63,12 @@ def _(alt, json, load_dotenv, mo, os, pl):
         raise RuntimeError(
             f"Falta DATOS_DIR. Copiá {RAIZ / '.env.example'} como .env y completalo."
         )
+    # Si DATOS_DIR es relativa se cuelga de la raíz del proyecto; si es absoluta, Path la respeta tal cual.
     DATOS = RAIZ / os.environ["DATOS_DIR"]
 
+    # Zona horaria para pasar las fechas de UTC a hora de Argentina (UTC−3).
     TZ = "America/Argentina/Buenos_Aires"
+    # Gris claro que usan todos los gráficos (combina con el tema oscuro del notebook).
     COLOR = "#d4d4d8"
 
     # Rectángulo que contiene a la Argentina: deja afuera coordenadas vacías o erróneas.
@@ -219,11 +222,15 @@ def _(iter_docs, pl, unwrap):
         return total
 
     _filas = []
+    # Se recorre hoja por hoja y se guarda solo lo escalar. La geometría OSRM (el 99% del peso)
+    # se descarta, así los 1,5 GB entran en memoria.
     for _doc in iter_docs("hojaDeRuta.json"):
+        # Los campos anidados pueden faltar o venir en null: "or {}" evita errores al leerlos.
         _geometria = _doc.get("geometriaOSRM") or {}
         _ida = _geometria.get("ida") or {}
         _vehiculo = _doc.get("vehiculo") or {}
 
+        # OSRM da la distancia en metros y la duración en segundos: acá pasan a km y minutos.
         _metros_ida = _ida.get("distancia_osrm")
         if _metros_ida is None:
             _km_ida = None
@@ -236,6 +243,7 @@ def _(iter_docs, pl, unwrap):
         else:
             _min_ida = _segundos_ida / 60
 
+        # Paradas y waypoints: se suman las tres variantes (ida, vuelta, alternativa) en un solo conteo.
         _paradas = _contar_elementos(_doc, ["paradasIda", "paradasVuelta", "paradasAlternativa"])
         _waypoints = _contar_elementos(_doc, ["waypointsIda", "waypointsVuelta", "waypointsAlternativa"])
 
@@ -252,10 +260,12 @@ def _(iter_docs, pl, unwrap):
                 "tipoVehiculo": _vehiculo.get("tipoVehiculo"),
                 "plazas": _vehiculo.get("cantidadPlazas"),
                 "pasajeros": _doc.get("totalPasajeros"),
+                # De la geometría solo importa si la hoja define vuelta o alternativa, no su contenido.
                 "tiene_vuelta": "vuelta" in _geometria,
                 "tiene_alternativa": "alternativa" in _geometria,
                 "km_ida": _km_ida,
                 "min_ida": _min_ida,
+                # Cantidad de puntos de la geometría de ida (los puntos en sí no se guardan).
                 "puntos_ida": len(_ida.get("puntos") or []),
                 "paradas": _paradas,
                 "waypoints": _waypoints,
@@ -263,6 +273,8 @@ def _(iter_docs, pl, unwrap):
         )
 
     # fechaDesde/Hasta son fechas nominales (medianoche UTC): quedan como fecha, sin pasar a hora local.
+    # infer_schema_length=None: polars mira todas las filas para decidir el tipo de cada columna
+    # (evita errores cuando los primeros valores de una columna son nulos).
     hdr = pl.from_dicts(_filas, infer_schema_length=None).with_columns(
         pl.col("desde", "hasta").str.to_datetime(strict=False, time_zone="UTC").dt.date()
     )
@@ -283,6 +295,7 @@ def _(mo):
 @app.cell
 def _(a_hora_local, iter_docs, pl, unwrap):
     _filas = []
+    # Un documento = un punto GPS fuera de ruta. Los puntos de un mismo episodio comparten grupoDesvioId.
     for _doc in iter_docs("desviosHojaRuta.json"):
         _retorno = _doc.get("retorno") or {}
         # En desvíos la posición viene como [lat, lon].
@@ -290,6 +303,8 @@ def _(a_hora_local, iter_docs, pl, unwrap):
 
         _filas.append(
             {
+                # "ts" es cuándo se registró el punto; "rastreo_ts" es cuándo el GPS midió esa
+                # posición (puede ser bastante antes, ver la demora más abajo).
                 "ts": unwrap(_doc["timestamp"]),
                 "rastreo_ts": unwrap(_doc.get("fechaHoraRastreo")),
                 "flota": _doc.get("flotaId"),
@@ -301,12 +316,14 @@ def _(a_hora_local, iter_docs, pl, unwrap):
                 "velocidad": _doc.get("velocidad"),
                 "lat": _posicion[0],
                 "lon": _posicion[1],
+                # Retorno: si el detector vio volver al vehículo a la ruta, cuándo y con qué motivo.
                 "retorno_detectado": _retorno.get("detectado"),
                 "retorno_ts": unwrap(_retorno.get("timestamp")),
                 "retorno_motivo": _retorno.get("motivo"),
             }
         )
 
+    # Las tres fechas vienen como texto UTC y se pasan a hora de Argentina.
     desv = pl.from_dicts(_filas, infer_schema_length=None).with_columns(
         a_hora_local("ts", "rastreo_ts", "retorno_ts")
     )
@@ -327,6 +344,7 @@ def _(mo):
 @app.cell
 def _(a_hora_local, iter_docs, pl, unwrap):
     _filas = []
+    # Un documento = un evento del GPS (posición programada, detenido, exceso de velocidad…).
     for _doc in iter_docs("rastreoSatelital.json"):
         # GeoJSON: las coordenadas vienen como [lon, lat].
         _ubicacion = _doc.get("location") or {}
@@ -343,6 +361,7 @@ def _(a_hora_local, iter_docs, pl, unwrap):
             }
         )
 
+    # "fecha" viene como texto UTC: se convierte a hora de Argentina.
     ras = pl.from_dicts(_filas, infer_schema_length=None).with_columns(a_hora_local("fecha"))
     ras
     return (ras,)
@@ -359,10 +378,13 @@ def _(mo):
 
 @app.cell
 def _(desv, hdr, pl, ras):
+    # Una fila por colección: cuántas filas tiene, qué período cubre y cuántos vehículos distintos.
+    # Sirve para ver si las tres colecciones cubren el mismo tiempo y los mismos vehículos.
     _resumen = pl.DataFrame(
         {
             "colección": ["hojaDeRuta", "desviosHojaRuta", "rastreoSatelital"],
             "filas": [hdr.height, desv.height, ras.height],
+            # En hojas de ruta el período es el de vigencia (desde/hasta); en desvíos y rastreo, el de las fechas del GPS.
             "desde": [
                 str(hdr["desde"].min()),
                 str(desv["rastreo_ts"].min()),
@@ -396,15 +418,18 @@ def _(mo):
 
 @app.cell
 def _(barras, hdr, mo, pl):
+    # Hojas por mes de inicio de vigencia (truncate("1mo") lleva cada fecha al día 1 de su mes).
     _mes = pl.col("desde").dt.truncate("1mo").alias("mes")
     _por_mes = hdr.group_by(_mes).len().sort("mes")
 
+    # Ocupación = pasajeros / plazas. Se descartan las hojas sin plazas para no dividir por cero.
     _con_plazas = hdr.filter(pl.col("plazas") > 0)
     _ocupacion = _con_plazas.with_columns(ocupacion=pl.col("pasajeros") / pl.col("plazas"))
     _ocupacion_media = _ocupacion["ocupacion"].mean()
     _sin_pasajeros = (hdr["pasajeros"] == 0).mean()
     _obras = hdr["obra_id"].n_unique()
 
+    # Conteos de las columnas categóricas, uno al lado del otro.
     _conteos = mo.hstack(
         [
             hdr["estado"].value_counts(sort=True),
@@ -414,7 +439,9 @@ def _(barras, hdr, mo, pl):
         ],
         wrap=True,
     )
+    # Días de vigencia de cada hoja (hasta − desde).
     _dias_vigencia = (pl.col("hasta") - pl.col("desde")).dt.total_days().alias("dias_vigencia")
+    # describe() calcula cantidad, media, desvío, mínimo, cuartiles y máximo de cada columna.
     _estadisticas = hdr.select(
         "km_ida",
         "min_ida",
@@ -426,6 +453,7 @@ def _(barras, hdr, mo, pl):
         _dias_vigencia,
     ).describe()
 
+    # La salida de la celda apila los bloques calculados arriba.
     mo.vstack(
         [
             _conteos,
@@ -454,6 +482,9 @@ def _(mo):
 
 @app.cell
 def _(barras, desv, mo, pl):
+    # Resumen preliminar por episodio, solo para explorar. Ojo: acá la duración usa "ts" (hora de
+    # registro) y "retorno_ts"; el corpus de más abajo usa la hora del GPS ("rastreo_ts"), que es
+    # la que corresponde a T₀.
     _episodios = (
         desv.group_by("grupo")
         .agg(
@@ -476,6 +507,7 @@ def _(barras, desv, mo, pl):
     _velocidad_nula = desv["velocidad"].is_null().mean()
     _con_tipo_hdr = desv["tipoHDR"].is_not_null().mean()
 
+    # Texto en markdown con los números calculados arriba (f-string).
     _texto = f"""
     {desv.height:,} puntos agrupados en **{_episodios.height:,} episodios** (`grupoDesvioId`),
     de {desv['flota'].n_unique()} vehículos y {desv['hdr_id'].n_unique():,} hojas de ruta.
@@ -518,9 +550,12 @@ def _(mo):
 @app.cell
 def _(barras, mo, pl, ras):
     _eventos = ras["evento"].value_counts(sort=True)
+    # Filas idénticas en todas las columnas: unique() las junta; la diferencia son los duplicados.
     _duplicadas = ras.height - ras.unique().height
 
+    # Eventos de exceso de velocidad. (?i) hace que la búsqueda ignore mayúsculas y minúsculas.
     _limite = ras.filter(pl.col("evento").str.contains("(?i)limite"))
+    # Si el evento dice "límite superado" pero la velocidad es 0, ese dato de velocidad no sirve.
     _limite_sin_velocidad = (_limite["velocidad"] == 0).mean()
 
     _dia = pl.col("fecha").dt.date().alias("dia")
@@ -565,6 +600,7 @@ def _(mo):
 def _(desv, hdr, mo, pl, ras):
     # Hojas de ruta citadas en desvíos que no existen en hojaDeRuta.
     _ids_hojas = hdr["id"].to_list()
+    # unique() deja cada id una sola vez; is_in compara contra los ids que sí existen en hojaDeRuta.
     _hojas_en_desvios = desv["hdr_id"].unique()
     _huerfanas = _hojas_en_desvios.filter(~_hojas_en_desvios.is_in(_ids_hojas))
     _puntos_huerfanos = desv["hdr_id"].is_in(_huerfanas.to_list()).sum()
@@ -574,6 +610,7 @@ def _(desv, hdr, mo, pl, ras):
     _vehiculos_desv = set(desv["flota"])
     _vehiculos_ras = set(ras["flota"])
 
+    # Primer día con datos de rastreo: sirve para contar cuántas hojas siguen vigentes en esa ventana.
     _inicio_rastreo = ras["fecha"].min().date()
     _hojas_en_rango = hdr.filter(pl.col("hasta") >= _inicio_rastreo)
 
@@ -581,6 +618,7 @@ def _(desv, hdr, mo, pl, ras):
     _fecha_gps = pl.col("rastreo_ts").dt.date()
     _dias_antes = (pl.col("desde") - _fecha_gps).dt.total_days()
     _dias_despues = (_fecha_gps - pl.col("hasta")).dt.total_days()
+    # Se cruza cada punto con su hoja (join) y quedan los que caen fuera de fechaDesde–fechaHasta.
     _fuera_vigencia = (
         desv.join(hdr.select("id", "desde", "hasta"), left_on="hdr_id", right_on="id")
         .filter(~_fecha_gps.is_between(pl.col("desde"), pl.col("hasta")))
@@ -594,6 +632,8 @@ def _(desv, hdr, mo, pl, ras):
     _despues = _fuera_vigencia.height - _antes
     _dias_fuera = _fuera_vigencia["dias_fuera"]
 
+    # Un mismo GPS puede aparecer en varios puntos de desvío (por ejemplo, medido contra distintas
+    # hojas): n_unique de (vehículo, hora del GPS) cuenta las posiciones reales.
     _gps_distintos = desv.select("flota", "rastreo_ts").n_unique()
 
     mo.md(
@@ -629,6 +669,7 @@ def _(mo):
 
 @app.cell
 def _(COLOR, EN_ARGENTINA, alt, mo, pl, ras):
+    # Grilla de 0,1° (unos 11 km): se cuentan los eventos por celda para no mandar todos los puntos al navegador.
     _grilla = (
         ras.filter(EN_ARGENTINA)
         .group_by(pl.col("lat").round(1), pl.col("lon").round(1))
@@ -637,6 +678,7 @@ def _(COLOR, EN_ARGENTINA, alt, mo, pl, ras):
     _fuera = ras.height - _grilla["len"].sum()
 
     _mapa = (
+        # Cada círculo es una celda de la grilla; su tamaño (escala logarítmica) es la cantidad de eventos.
         alt.Chart(_grilla)
         .mark_circle(color=COLOR, opacity=0.6)
         .encode(
@@ -731,19 +773,26 @@ def _(EN_ARGENTINA, desv, hdr, pl, ras):
         return (pl.arctan2(y, x).degrees() + 360) % 360
 
     # 1) Lecturas válidas.
+    # Un GPS sin señal suele informar (0, 0): es un punto en el océano, no una posición real.
     _en_origen = (pl.col("lat") == 0) & (pl.col("lon") == 0)
     _lecturas = desv.filter(
+        # Se exige grupo (para poder agrupar), año 2025–2026 (descarta fechas basura) y posición válida.
         pl.col("grupo").is_not_null(),
         pl.col("rastreo_ts").dt.year().is_between(2025, 2026),
         ~_en_origen,
     )
 
     # 2) Un registro por grupoDesvioId: atributos del primer ping y la duración.
+    # Atributos que se toman del primer ping del evento: es lo único que se conoce en T₀.
     _atributos_primer_ping = pl.col(
         "flota", "hdr_id", "tipoHDR", "distancia_m", "velocidad", "ruta_cercana", "lat", "lon"
     )
+    # Se ordena por hora del GPS y, si hay empate, por distancia y posición, para que "el primero"
+    # sea siempre el mismo ping y el resultado no dependa del orden de las filas.
     _primer_ping = _atributos_primer_ping.sort_by("rastreo_ts", "distancia_m", "lat", "lon").first()
+    # Duración y = último GPS − primer GPS del evento, en segundos (hora del GPS, no la de registro).
     _duracion = (pl.col("rastreo_ts").max() - pl.col("rastreo_ts").min()).dt.total_seconds()
+    # Una fila por evento: atributos del primer ping, T₀ (su hora), cantidad de lecturas y duración.
     _eventos = _lecturas.group_by("grupo").agg(
         _primer_ping,
         t0=pl.col("rastreo_ts").min(),
@@ -753,6 +802,7 @@ def _(EN_ARGENTINA, desv, hdr, pl, ras):
     _n_eventos = _eventos.height
 
     # 3) Datos de la hoja de ruta (si el join alcanza).
+    # Datos de la hoja de ruta de cada evento; unique() evita duplicar eventos si una hoja está repetida.
     _hojas = hdr.select(
         pl.col("id").alias("hdr_id"),
         "obra_id",
@@ -765,17 +815,23 @@ def _(EN_ARGENTINA, desv, hdr, pl, ras):
         "pasajeros",
         pl.col("tipoHDR").alias("tipoHDR_hoja"),
     ).unique("hdr_id")
+    # how="left": los eventos cuya hoja no existe se quedan, con esas columnas en nulo.
     _eventos = (
         _eventos.join(_hojas, on="hdr_id", how="left")
         .with_columns(
+            # Si el ping no trae tipoHDR se usa el de la hoja (coalesce toma el primero que no sea nulo).
             tipoHDR=pl.coalesce("tipoHDR", "tipoHDR_hoja"),
+            # hoja_vigente: T₀ cae entre fechaDesde y fechaHasta de la hoja.
             hoja_vigente=pl.col("t0").dt.date().is_between(pl.col("desde"), pl.col("hasta")),
         )
+        # "desde" y "hasta" solo servían para calcular hoja_vigente.
         .drop("tipoHDR_hoja", "desde", "hasta")
     )
 
     # 4) Mismo desvío medido contra varias hojas: uno por vehículo y T0, prefiriendo la hoja vigente.
     #    "grupo" desempata para que el resultado no dependa del orden interno de polars.
+    # El orden deja primero, dentro de cada (vehículo, T₀), la fila con hoja vigente (descending=True
+    # en hoja_vigente pone los True antes); unique(keep="first") se queda con esa fila.
     _eventos = _eventos.sort(
         "flota",
         "t0",
@@ -787,8 +843,12 @@ def _(EN_ARGENTINA, desv, hdr, pl, ras):
 
     # 5) Rastreo de los 10 minutos anteriores a T0 (sin incluir T0).
     #    Se acumulan sumas por vehículo; el tramo [primer GPS, último GPS] sale de dos join_asof.
+    # Velocidad como decimal. _hay_velocidad vale 1 en los GPS que traen velocidad, para promediar
+    # sin contar los nulos.
     _velocidad = pl.col("velocidad").cast(pl.Float64)
     _hay_velocidad = _velocidad.is_not_null().cast(pl.Int64)
+    # Tabla de GPS ordenada por fecha. Por vehículo se guardan acumulados (cantidad de GPS y suma de
+    # velocidades): lo ocurrido en una ventana sale de restar dos filas, sin recorrer los GPS en cada evento.
     _gps = (
         ras.filter(pl.col("fecha").is_not_null(), EN_ARGENTINA)
         .select("flota", "fecha", "velocidad", "lat", "lon")
@@ -800,13 +860,17 @@ def _(EN_ARGENTINA, desv, hdr, pl, ras):
             v_cuenta=_hay_velocidad.cum_sum().over("flota"),
             v_actual=_velocidad.fill_null(0),
             v_hay=_hay_velocidad,
+            # k es la clave de tiempo que usa join_asof.
             k=pl.col("fecha"),
         )
     )
+    # Una fila por evento con su vehículo y su T₀: son las "preguntas" que se buscan en la tabla de GPS.
     _claves = _eventos.select("grupo", "flota", "t0")
 
     # Último GPS antes de T0.
     _ultimo = (
+        # T₀ − 1 µs: busca hacia atrás el último GPS estrictamente anterior a T₀ (hasta 10 min antes),
+        # así no se usa ninguna información del propio T₀.
         _claves.with_columns(k=pl.col("t0") - pl.duration(microseconds=1))
         .sort("k")
         .join_asof(
@@ -831,6 +895,8 @@ def _(EN_ARGENTINA, desv, hdr, pl, ras):
 
     # Primer GPS dentro de los 10 minutos previos a T0.
     _primero = (
+        # T₀ − 10 min: busca hacia adelante el primer GPS de la ventana. Si ese GPS es posterior a T₀
+        # (el vehículo no tenía GPS en la ventana), el evento queda sin rastreo previo.
         _claves.with_columns(k=pl.col("t0") - pl.duration(minutes=10))
         .sort("k")
         .join_asof(
@@ -847,14 +913,19 @@ def _(EN_ARGENTINA, desv, hdr, pl, ras):
             p_lat="lat",
             p_lon="lon",
             p_n="n",
+            # Acumulado justo ANTES del primer GPS de la ventana: restarlo al acumulado del último GPS
+            # deja la suma de toda la ventana, incluido el primero.
             p_suma=pl.col("v_suma") - pl.col("v_actual"),
             p_cuenta=pl.col("v_cuenta") - pl.col("v_hay"),
         )
     )
 
+    # Suma y cantidad de velocidades dentro de la ventana [primer GPS, último GPS].
     _suma_velocidades = pl.col("u_suma") - pl.col("p_suma")
     _cantidad_velocidades = pl.col("u_cuenta") - pl.col("p_cuenta")
+    # Posición del primer y del último GPS de la ventana: de acá salen el desplazamiento y el rumbo.
     _coordenadas = [pl.col("p_lat"), pl.col("p_lon"), pl.col("u_lat"), pl.col("u_lon")]
+    # Hora del evento en hora de Argentina (t0 ya viene en esa zona).
     _hora = pl.col("t0").dt.hour()
     _franja = (
         pl.when(_hora < 6)
@@ -870,10 +941,14 @@ def _(EN_ARGENTINA, desv, hdr, pl, ras):
         _eventos.join(_ultimo, on="grupo", how="left")
         .join(_primero, on="grupo", how="left")
         .with_columns(
+            # GPS en la ventana = diferencia de contadores acumulados + 1 (cuenta también el primero); 0 si no hubo.
             gps_previos=(pl.col("u_n") - pl.col("p_n") + 1).fill_null(0),
+            # Velocidad media previa = suma / cantidad de GPS que sí traían velocidad.
             vel_media_previa=_suma_velocidades / _cantidad_velocidades,
             vel_ultima=pl.col("u_vel"),
+            # Minutos entre el último GPS y T₀: qué tan fresca es la última posición.
             min_desde_ultimo_gps=(pl.col("t0") - pl.col("u_fecha")).dt.total_seconds() / 60,
+            # Distancia en línea recta entre el primer y el último GPS de la ventana, y rumbo de ese tramo.
             desplaz_previo_m=_distancia_m(*_coordenadas),
             rumbo_previo=_rumbo(*_coordenadas),
         )
@@ -885,13 +960,18 @@ def _(EN_ARGENTINA, desv, hdr, pl, ras):
             dia_semana=pl.col("t0").dt.weekday(),
             franja=_franja,
         )
+        # Se borran las columnas auxiliares u_* y p_*: solo servían para calcular los atributos.
         .drop(pl.selectors.starts_with("u_", "p_"))
     )
 
     # 6) Panel final.
+    # Válido: al menos 2 lecturas (con una sola no hay duración medible) y duración mayor a 0.
     _valido = (pl.col("lecturas") >= 2) & (pl.col("y") > 0)
+    # Corpus: eventos válidos que terminan antes del tope de 4 h (retorno medido), ordenados por T₀.
     corpus = _eventos.filter(_valido & (pl.col("y") < TOPE_S)).sort("t0")
+    # Tope: eventos válidos que llegan a 4 h. El detector los cortó, no hay retorno medido: van aparte.
     tope = _eventos.filter(_valido & (pl.col("y") >= TOPE_S))
+    # Conteos para explicar de dónde salen los eventos del corpus (se muestran en la celda siguiente).
     resumen_corpus = {
         "eventos": _n_eventos,
         "repetidos": _n_repetidos,
@@ -915,8 +995,11 @@ def _(mo):
 @app.cell
 def _(COLOR, TOPE_S, alt, corpus, mo, pl, resumen_corpus):
     # Histograma ya agregado (60 barras hasta el tope): altair no acepta más de 5000 filas.
+    # Barras de _ancho_min minutos (4) entre 0 y el tope de 4 h: 60 barras en total.
     _ancho_min = TOPE_S / 60 / 60
+    # Cada duración se lleva al inicio de su barra (piso del múltiplo del ancho).
     _inicio_barra = (pl.col("y") / 60 / _ancho_min).floor() * _ancho_min
+    # Eventos por barra.
     _barras = corpus.group_by(minutos=_inicio_barra).len("eventos").sort("minutos")
 
     _histograma = (
@@ -929,13 +1012,16 @@ def _(COLOR, TOPE_S, alt, corpus, mo, pl, resumen_corpus):
                 title="duración (minutos)",
             ),
             x2=alt.X2("hasta:Q"),
+            # Escala symlog: hay muchísimos más eventos cortos que largos; symlog muestra ambos y admite el 0.
             y=alt.Y("eventos:Q", title="eventos", scale=alt.Scale(type="symlog")),
         )
+        # Fin de cada barra, para dibujarla de "minutos" a "hasta".
         .transform_calculate(hasta=f"datum.minutos + {_ancho_min}")
         .properties(width=600, height=220, title="Duración de los desvíos del corpus")
     )
 
     _resumen = resumen_corpus
+    # La duración y está en segundos: mediana y percentil 90 pasan a minutos.
     _mediana_min = corpus["y"].median() / 60
     _p90_min = corpus["y"].quantile(0.9) / 60
     _texto = f"""
@@ -959,6 +1045,7 @@ def _(COLOR, TOPE_S, alt, corpus, mo, pl, resumen_corpus):
 
 @app.cell
 def _(mo):
+    # Atributos candidatos, agrupados por su origen. Todos se conocen en T₀.
     ATRIBUTOS = {
         "Primer ping": [
             "distancia_m",
@@ -990,12 +1077,15 @@ def _(mo):
             "rumbo_previo",
         ],
     }
+    # Atributos que son categorías (texto o ids), no números: los modelos no deben tratarlos como orden.
     CATEGORICOS = {"ruta_cercana", "franja", "tipoVehiculo", "tipoHDR", "obra_id"}
 
+    # Lista plana con todos los atributos, para el selector.
     _todos = []
     for _grupo in ATRIBUTOS.values():
         _todos.extend(_grupo)
 
+    # Selector interactivo: al cambiarlo, marimo vuelve a correr las celdas que dependen de él.
     elegidos = mo.ui.multiselect(
         options=_todos,
         value=_todos,
@@ -1041,6 +1131,7 @@ def _(CATEGORICOS, corpus, pl):
     from sklearn.model_selection import GroupKFold
     from sklearn.tree import DecisionTreeRegressor
 
+    # Modelo de referencia: predice siempre la mediana de duración del entrenamiento.
     BASELINE = "Mediana (baseline)"
 
     def _matriz(atributos):
@@ -1100,6 +1191,8 @@ def _(CATEGORICOS, corpus, pl):
         único modelo además del baseline. Devuelve un DataFrame con una fila por modelo y las
         columnas MAE, error mediano y mejora del MAE respecto de la mediana.
         """
+        # X: matriz de atributos. y: duración en segundos. vehiculos: vehículo de cada evento,
+        # que define las particiones de la validación cruzada.
         X = _matriz(atributos)
         y = corpus["y"].to_numpy()
         vehiculos = corpus["flota"].to_numpy()
@@ -1129,6 +1222,7 @@ def _(CATEGORICOS, corpus, pl):
                 modelo.fit(X[entrenamiento], np.log1p(y[entrenamiento]))
                 predicciones[nombre][prueba] = np.expm1(modelo.predict(X[prueba]))
 
+        # MAE del baseline, para calcular la mejora de cada modelo.
         error_baseline = np.abs(predicciones[BASELINE] - y).mean()
 
         # Métricas por modelo, en minutos. La mejora es 1 - MAE del modelo / MAE de la mediana.
@@ -1161,8 +1255,10 @@ def _(mo):
 def _(COLOR, alt, elegidos, evaluar, mo):
     mo.stop(not elegidos.value, mo.md("Elegí al menos un atributo."))
 
+    # Validación cruzada con los atributos del selector (con Random Forest tarda un rato).
     resultados = evaluar(list(elegidos.value))
 
+    # Barras con el MAE de cada modelo; sort="x" las ordena de menor a mayor error.
     _grafico = (
         alt.Chart(resultados)
         .mark_bar(color=COLOR, cornerRadiusEnd=4)
@@ -1198,10 +1294,13 @@ def _(mo):
 def _(ATRIBUTOS, evaluar, pl):
     _filas = []
     _acumulados = []
+    # Cada vuelta suma un grupo más a los anteriores: primer ping, + hoja de ruta, + rastreo previo.
     for _grupo, _atributos in ATRIBUTOS.items():
         _acumulados = _acumulados + _atributos
 
+        # solo="Gradient boosting": entrena únicamente ese modelo, para ir más rápido.
         _resultado = evaluar(_acumulados, solo="Gradient boosting")
+        # Se queda con la fila del modelo y deja afuera la del baseline.
         _resultado = _resultado.filter(pl.col("modelo") == "Gradient boosting")
 
         if _filas:
