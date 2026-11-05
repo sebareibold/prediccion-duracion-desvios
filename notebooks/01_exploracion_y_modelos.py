@@ -1098,8 +1098,8 @@ def _(mo):
                 """
     # Modelos
 
-    Se comparan contra la **mediana** (*baseline*): un árbol de decisión, un Random Forest y
-    *gradient boosting*. Los tres aprenden log(1 + *y*), porque la duración tiene cola larga.
+    Se comparan contra la **mediana** (*baseline*): un árbol de decisión y un Random Forest. Los
+    dos aprenden log(1 + *y*), porque la duración tiene cola larga.
 
     Validación cruzada de 5 particiones **por vehículo**: un mismo móvil nunca queda en
     entrenamiento y prueba a la vez. Métricas en minutos, sobre las predicciones fuera de muestra:
@@ -1118,7 +1118,7 @@ def _(mo):
 def _(mo):
     mo.md("""
     ## Entrenamiento y evaluación
-    Pasa los atributos a números, entrena los tres modelos y los compara con la mediana.
+    Pasa los atributos a números, entrena los dos modelos y los compara con la mediana.
     Cada modelo se prueba con vehículos que no vio al entrenar.
     """)
     return
@@ -1127,7 +1127,7 @@ def _(mo):
 @app.cell
 def _(CATEGORICOS, corpus, pl):
     import numpy as np
-    from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor
+    from sklearn.ensemble import RandomForestRegressor
     from sklearn.model_selection import GroupKFold
     from sklearn.tree import DecisionTreeRegressor
 
@@ -1152,17 +1152,11 @@ def _(CATEGORICOS, corpus, pl):
                 columnas.append(pl.col(atributo).cast(pl.Float64))
         return corpus.select(columnas).to_numpy()
 
-    def _modelos(atributos):
+    def _modelos():
         """Modelos nuevos (sin entrenar), con semilla fija para que los resultados se repitan.
 
-        atributos: lista de columnas usadas, para avisarle al gradient boosting cuáles son
-        categóricas. Devuelve un diccionario {nombre: modelo}.
+        Devuelve un diccionario {nombre: modelo}.
         """
-        # Una marca por columna, en el mismo orden que la matriz de _matriz.
-        es_categorico = []
-        for atributo in atributos:
-            es_categorico.append(atributo in CATEGORICOS)
-
         return {
             # Profundidad y hoja mínima limitadas para que el árbol no memorice.
             "Árbol de decisión": DecisionTreeRegressor(
@@ -1175,11 +1169,6 @@ def _(CATEGORICOS, corpus, pl):
                 n_estimators=200,
                 min_samples_leaf=10,
                 n_jobs=-1,
-                random_state=0,
-            ),
-            # Con categorical_features el modelo trata esas columnas como categorías, no como orden.
-            "Gradient boosting": HistGradientBoostingRegressor(
-                categorical_features=es_categorico,
                 random_state=0,
             ),
         }
@@ -1198,7 +1187,7 @@ def _(CATEGORICOS, corpus, pl):
         vehiculos = corpus["flota"].to_numpy()
 
         if solo is None:
-            nombres = list(_modelos(atributos))
+            nombres = list(_modelos())
         else:
             nombres = [solo]
 
@@ -1215,7 +1204,7 @@ def _(CATEGORICOS, corpus, pl):
             predicciones[BASELINE][prueba] = np.median(y[entrenamiento])
 
             # Modelos nuevos en cada partición, para no arrastrar lo aprendido de la anterior.
-            modelos = _modelos(atributos)
+            modelos = _modelos()
             for nombre in nombres:
                 modelo = modelos[nombre]
                 # Se entrena sobre log(1 + y) y se vuelve a segundos al predecir.
@@ -1285,7 +1274,7 @@ def _(mo):
     mo.md("""
     ## ¿Cuánto aporta cada grupo de atributos?
     Se agregan los grupos de a uno (primer ping, hoja de ruta, rastreo previo) y se mide el
-    error de *gradient boosting* cada vez.
+    error del Random Forest cada vez.
     """)
     return
 
@@ -1298,10 +1287,10 @@ def _(ATRIBUTOS, evaluar, pl):
     for _grupo, _atributos in ATRIBUTOS.items():
         _acumulados = _acumulados + _atributos
 
-        # solo="Gradient boosting": entrena únicamente ese modelo, para ir más rápido.
-        _resultado = evaluar(_acumulados, solo="Gradient boosting")
+        # solo="Random Forest": entrena únicamente ese modelo, para ir más rápido.
+        _resultado = evaluar(_acumulados, solo="Random Forest")
         # Se queda con la fila del modelo y deja afuera la del baseline.
-        _resultado = _resultado.filter(pl.col("modelo") == "Gradient boosting")
+        _resultado = _resultado.filter(pl.col("modelo") == "Random Forest")
 
         if _filas:
             _etiqueta = "+ " + _grupo

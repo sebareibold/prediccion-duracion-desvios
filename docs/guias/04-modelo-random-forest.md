@@ -8,7 +8,7 @@ equivoca de maneras distintas a otro, y al promediar esos errores se cancelan en
 
 ## Para qué está
 
-- El proyecto compara un árbol contra un ensamble. Los trabajos relacionados (Grigorev et al.,
+- El proyecto compara un árbol contra un ensamble de árboles. Los trabajos relacionados (Grigorev et al.,
   2022) usan ensambles de árboles como línea principal para predecir duración de incidentes.
 - En este proyecto es el modelo con mejor resultado.
 
@@ -38,7 +38,7 @@ equivoca de maneras distintas a otro, y al promediar esos errores se cancelan en
 |---|---|---|
 | **27,0** | **13,0** | **16 %** |
 
-Es el mejor de los tres modelos, aunque por poco: *gradient boosting* queda a 0,3 minutos.
+Es el mejor de los dos modelos: baja el error 1,8 minutos más que el árbol.
 
 ## Ventajas y límites
 

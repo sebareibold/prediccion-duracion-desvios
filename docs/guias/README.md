@@ -9,7 +9,6 @@ para que cualquiera del grupo entienda qué se hizo sin leer el código.
 | [02-modelo-mediana.md](02-modelo-mediana.md) | El *baseline*: predecir siempre la mediana |
 | [03-modelo-arbol-de-decision.md](03-modelo-arbol-de-decision.md) | Árbol de decisión |
 | [04-modelo-random-forest.md](04-modelo-random-forest.md) | Random Forest |
-| [05-modelo-gradient-boosting.md](05-modelo-gradient-boosting.md) | Gradient boosting |
 
 Los números salen del README del proyecto. Si se cambia el corpus o los modelos, hay que
 actualizar las guías.

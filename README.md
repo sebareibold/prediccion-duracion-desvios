@@ -93,29 +93,28 @@ corpus: mediana 20 min, cuartiles 10 y 53 min.
 
 ## Modelos y resultados
 
-Tres modelos de scikit-learn contra la **mediana** como *baseline*: árbol de decisión, Random
-Forest y *gradient boosting* (`HistGradientBoostingRegressor`). Los tres aprenden log(1 + *y*)
-porque la duración tiene cola larga. La validación cruzada es de 5 particiones **por vehículo**
-(`GroupKFold`): un móvil nunca está en entrenamiento y prueba a la vez.
+Dos modelos de scikit-learn contra la **mediana** como *baseline*: árbol de decisión y Random
+Forest. Los dos aprenden log(1 + *y*) porque la duración tiene cola larga. La validación
+cruzada es de 5 particiones **por vehículo** (`GroupKFold`): un móvil nunca está en
+entrenamiento y prueba a la vez.
 
 | modelo | MAE (min) | error mediano (min) | mejora del MAE vs. mediana |
 |---|---|---|---|
 | Mediana (*baseline*) | 32,1 | 15,0 | — |
 | Árbol de decisión | 28,8 | 14,4 | 10 % |
 | **Random Forest** | **27,0** | **13,0** | **16 %** |
-| Gradient boosting | 27,3 | 13,1 | 15 % |
 
-Aporte de cada grupo de atributos, sumándolos de a uno (*gradient boosting*):
+Aporte de cada grupo de atributos, sumándolos de a uno (Random Forest):
 
 | atributos | MAE (min) | mejora vs. mediana |
 |---|---|---|
 | Primer ping | 29,4 | 8 % |
-| + Hoja de ruta | 27,3 | 15 % |
-| + Rastreo previo | 27,3 | 15 % |
+| + Hoja de ruta | 27,0 | 16 % |
+| + Rastreo previo | 27,0 | 16 % |
 
 Primeras conclusiones: los modelos le ganan a la mediana, pero por poco. La hoja de ruta aporta
-casi lo mismo que el primer ping y el rastreo previo no suma nada: falta GPS previo en el 42 % de
-los eventos. En el notebook se pueden sacar atributos de la lista y ver cómo cambia el error.
+tanto como el primer ping y el rastreo previo no suma nada: falta GPS previo en el 42 % de los
+eventos. En el notebook se pueden sacar atributos de la lista y ver cómo cambia el error.
 
 ## Trabajos relacionados
 
