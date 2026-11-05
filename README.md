@@ -35,7 +35,8 @@ predecir en ese momento (*T₀*) **cuántos segundos va a durar el desvío**, co
 │   ├── diagramas/                   modelo de datos, cómo nace un desvío, línea de tiempo
 │   └── guias/                       explicación paso a paso del corpus y de cada modelo
 ├── reports/                         entregas: primera entrega, informe de avance, plan de trabajo
-│   └── exploracion-y-corpus/        informe "Exploración y corpus" (fuente LaTeX y PDF)
+│   ├── exploracion-y-corpus/        informe "Exploración y corpus" (fuente LaTeX y PDF)
+│   └── presentacion/                presentación final (Beamer, para Overleaf: .tex, tema, guion y PDF)
 └── references/                      papers de trabajos relacionados (no se suben)
 ```
 

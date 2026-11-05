@@ -1,0 +1,85 @@
+% Guion del orador, generado desde el guion del video (src/script.json).
+% Uso: \g{escena}{beat}  dentro de \note{...}. Editable desde Overleaf.
+\makeatletter
+\newcommand{\g}[2]{\csname guion@#1@#2\endcsname\ }
+
+\expandafter\def\csname guion@intro@hook\endcsname{Un vehículo de Tecfield se sale de su ruta. Llega el primer aviso, y la pregunta es una sola: ¿cuánto va a durar este desvío?}
+\expandafter\def\csname guion@intro@tp\endcsname{Ese es nuestro trabajo práctico de Laboratorio de Inteligencia Artificial. Grupo 5: Sebastián, Bautista y Davor.}
+\expandafter\def\csname guion@intro@mapa\endcsname{En esta presentación lo recorremos entero: el problema, los datos, cómo lo trabajamos en el notebook, cómo armamos el corpus, y los dos modelos que vamos a presentar.}
+\expandafter\def\csname guion@intro@jueves\endcsname{El jueves nos repartimos así: Bauti explica el corpus, Seba el árbol de decisión, y Davor el Random Forest.}
+
+\expandafter\def\csname guion@problema@flota\endcsname{Tecfield opera flotas que llevan personal a obras y yacimientos. Cada vehículo tiene una hoja de ruta, con el recorrido planificado.}
+\expandafter\def\csname guion@problema@detector\endcsname{Un detector compara la posición GPS contra ese recorrido. Cuando el vehículo se aleja más de 500 m, empieza a registrar lecturas de desvío.}
+\expandafter\def\csname guion@problema@t0\endcsname{Al primer punto fuera de ruta lo llamamos T\textsubscript{0}. Y en T\textsubscript{0} nadie sabe si el vehículo tomó una calle alternativa y vuelve en un minuto, o si va a quedar afuera una hora.}
+\expandafter\def\csname guion@problema@volumen\endcsname{El detector genera unas 100.000 lecturas por mes, y hoy todas las alertas se atienden con la misma prioridad.}
+\expandafter\def\csname guion@problema@etiquetas\endcsname{No hay etiquetas que digan por qué pasó cada desvío. Pero hay algo que sí queda registrado siempre: cuánto duró.}
+\expandafter\def\csname guion@problema@objetivo\endcsname{Entonces el objetivo es una regresión: en T\textsubscript{0}, y solo con lo que se sabe hasta ese momento, predecir cuántos segundos va a durar el desvío. Una alerta temprana.}
+
+\expandafter\def\csname guion@evento@unidad\endcsname{La unidad de análisis no es la lectura: es el evento. El detector ya agrupa las lecturas de una misma salida de ruta con un identificador, el grupoDesvioId.}
+\expandafter\def\csname guion@evento@y\endcsname{La duración, la variable que queremos predecir, es la última hora del GPS menos la primera, en segundos.}
+\expandafter\def\csname guion@evento@reloj\endcsname{Ojo con el reloj: se usa la hora en que el GPS midió la posición, no la hora en que el detector escribió el registro. No son lo mismo.}
+\expandafter\def\csname guion@evento@tope\endcsname{Y el detector corta a las 4 horas. Un evento que llega a ese tope no tiene un regreso a la ruta medido.}
+
+\expandafter\def\csname guion@datos@tres\endcsname{Tecfield nos pasó tres colecciones exportadas de MongoDB: casi 2 GB de JSON.}
+\expandafter\def\csname guion@datos@desvios\endcsname{Desvíos hoja de ruta: las lecturas del detector, de junio a agosto de 2026. De acá salen los eventos y la duración.}
+\expandafter\def\csname guion@datos@hojas\endcsname{Hoja de ruta: el plan del viaje, con paradas, pasajeros y el trazado de OSRM, que da el largo y la duración del recorrido.}
+\expandafter\def\csname guion@datos@rastreo\endcsname{Y rastreo satelital: el GPS crudo de cada vehículo, que usamos para ver qué venía haciendo antes de T\textsubscript{0}.}
+\expandafter\def\csname guion@datos@trampas\endcsname{Al explorarlas aparecieron trampas. Las coordenadas vienen invertidas: latitud, longitud en desvíos, y longitud, latitud en el GPS. Las fechas vienen en hora universal. Y el vehículo tiene un nombre distinto en cada colección.}
+\expandafter\def\csname guion@datos@vigencia\endcsname{Además, el 61\,\% de los desvíos cae fuera de la vigencia de su hoja de ruta, y un mismo punto se guarda varias veces, contra hojas distintas.}
+
+\expandafter\def\csname guion@notebook@marimo\endcsname{Todo el trabajo vive en un notebook de marimo, con polars para las tablas, altair para los gráficos y scikit-learn para los modelos.}
+\expandafter\def\csname guion@notebook@partes\endcsname{Tiene tres partes: explorar los datos, armar el corpus, y comparar modelos.}
+\expandafter\def\csname guion@notebook@carga\endcsname{La carga lee los JSON de a un documento. De las hojas de ruta descartamos la geometría, que es casi todo el peso del archivo. Así los datos entran en memoria.}
+\expandafter\def\csname guion@notebook@limpieza\endcsname{Al cargar, las fechas se pasan a la hora de Argentina, las coordenadas se acomodan, y el vehículo queda con un solo nombre: flota.}
+\expandafter\def\csname guion@notebook@reactivo\endcsname{Y es reactivo: en la parte de modelos hay un selector de atributos. Sacás uno, el modelo se entrena de nuevo solo, y te muestra cómo cambia el error.}
+
+\expandafter\def\csname guion@corpus@intro\endcsname{Ahora, el corazón del trabajo: el corpus. Una tabla con una fila por desvío, los atributos que se conocen en T\textsubscript{0}, y la duración.}
+\expandafter\def\csname guion@corpus@p1\endcsname{Se arma en 7 pasos. Primero, se tiran las lecturas inválidas: posición [0, 0], o fechas fuera de 2025 y 2026.}
+\expandafter\def\csname guion@corpus@p2\endcsname{Segundo, se agrupa por evento, y T\textsubscript{0} es el primer ping. De ese ping salen la distancia hasta la ruta, la velocidad y la posición.}
+\expandafter\def\csname guion@corpus@p3\endcsname{Tercero, se cruza con la hoja de ruta. Cuarto, se sacan los repetidos: uno por vehículo y T\textsubscript{0}, prefiriendo la hoja vigente.}
+\expandafter\def\csname guion@corpus@p5\endcsname{Quinto, el rastreo previo: el GPS de los 10 minutos antes de T\textsubscript{0}, con un join\_asof, sin tocar nada del propio T\textsubscript{0}.}
+\expandafter\def\csname guion@corpus@p6\endcsname{Sexto, la hora, el día y la franja. Y séptimo, el filtro final: dos lecturas o más, duración mayor a cero, y menos de 4 horas.}
+
+\expandafter\def\csname guion@embudo@inicio\endcsname{Arrancamos con 37.720 eventos.}
+\expandafter\def\csname guion@embudo@repetidos\endcsname{Se van 2.007 repetidos.}
+\expandafter\def\csname guion@embudo@cortos\endcsname{19.240, con una sola lectura o duración cero.}
+\expandafter\def\csname guion@embudo@tope\endcsname{Y 2.841 que llegan al tope de 4 horas: no se tiran, quedan aparte.}
+\expandafter\def\csname guion@embudo@quedan\endcsname{Quedan 13.632 eventos, de 556 vehículos. Con eso se entrena.}
+
+\expandafter\def\csname guion@atributos@grupos\endcsname{Los atributos vienen de tres lugares.}
+\expandafter\def\csname guion@atributos@ping\endcsname{Del primer ping: distancia a la ruta, velocidad, ruta más cercana, posición, hora, día y franja.}
+\expandafter\def\csname guion@atributos@hoja\endcsname{De la hoja de ruta: tipo de vehículo y de hoja, obra, largo y duración del recorrido, plazas, pasajeros, y si la hoja estaba vigente.}
+\expandafter\def\csname guion@atributos@previo\endcsname{Y del rastreo previo: cantidad de puntos, velocidad media y última, desplazamiento y rumbo de los 10 minutos anteriores.}
+\expandafter\def\csname guion@atributos@fugas\endcsname{Y lo que no puede entrar nunca, porque sería hacer trampa: cómo terminó el desvío, cuántas lecturas tuvo, o cualquier dato posterior a T\textsubscript{0}.}
+
+\expandafter\def\csname guion@duracion@forma\endcsname{¿Y cómo son las duraciones? La mitad de los desvíos dura menos de 20 minutos. El cuartil de abajo, 10 minutos, y el de arriba, 53.}
+\expandafter\def\csname guion@duracion@cola\endcsname{Pero hay una cola larga: pocos eventos, muy largos. Por eso los modelos aprenden el logaritmo de uno más la duración, y al predecir se vuelve a segundos.}
+
+\expandafter\def\csname guion@evaluacion@baseline\endcsname{Para saber si un modelo sirve, hace falta una referencia. La nuestra es la mediana: predecir siempre la misma duración, sin mirar nada. Así se equivoca, en promedio, 32,1 minutos.}
+\expandafter\def\csname guion@evaluacion@metricas\endcsname{Medimos el error absoluto medio y el error mediano, en minutos.}
+\expandafter\def\csname guion@evaluacion@grupos\endcsname{Y la validación cruzada es de 5 particiones, por vehículo. Un mismo vehículo nunca está en entrenamiento y en prueba a la vez. Así el modelo no memoriza un móvil que ya vio.}
+\expandafter\def\csname guion@evaluacion@dos\endcsname{Contra esa referencia comparamos dos modelos: un árbol de decisión, y un Random Forest.}
+
+\expandafter\def\csname guion@arbol@que\endcsname{El primer modelo es el árbol de decisión. Hace una serie de preguntas sobre los atributos, y cada respuesta lo lleva por una rama, hasta una hoja.}
+\expandafter\def\csname guion@arbol@hoja\endcsname{En la hoja está el promedio de los eventos de entrenamiento que llegaron hasta ahí. Esa es la predicción.}
+\expandafter\def\csname guion@arbol@real\endcsname{En nuestro árbol, la primera pregunta es si el desvío trae el tipo de hoja informado. Si lo trae, la mediana es de 40 minutos. Si no, de 14. Y después pregunta por la distancia a la ruta en el primer ping.}
+\expandafter\def\csname guion@arbol@config\endcsname{Lo limitamos a 8 niveles de profundidad, y cada hoja necesita al menos 30 eventos, para que no memorice.}
+\expandafter\def\csname guion@arbol@resultado\endcsname{Resultado: 28,8 minutos de error medio. Un 10\,\% mejor que la mediana.}
+\expandafter\def\csname guion@arbol@limites\endcsname{La ventaja: se puede dibujar y explicar. El límite: un solo árbol es inestable. Un cambio chico en los datos le cambia toda la estructura.}
+
+\expandafter\def\csname guion@bosque@que\endcsname{El segundo modelo es el Random Forest: en vez de un árbol, 200 árboles.}
+\expandafter\def\csname guion@bosque@azar\endcsname{Cada árbol se entrena con una muestra distinta de eventos, y en cada pregunta mira un subconjunto distinto de atributos. Así, cada uno se equivoca de una manera diferente.}
+\expandafter\def\csname guion@bosque@promedio\endcsname{La predicción final es el promedio de los doscientos. Al promediar, esos errores se cancelan en parte.}
+\expandafter\def\csname guion@bosque@importancia\endcsname{¿Qué atributos pesan más? El tipo de hoja, la distancia hasta la ruta, la posición y la velocidad. Casi todo, del primer ping y de la hoja.}
+\expandafter\def\csname guion@bosque@resultado\endcsname{Resultado: 27 minutos de error medio. Un 16\,\% mejor que la mediana: el mejor de los dos.}
+
+\expandafter\def\csname guion@resultados@tabla\endcsname{Lado a lado: la mediana se equivoca 32,1 minutos, el árbol 28,8, y el Random Forest 27.}
+\expandafter\def\csname guion@resultados@grupos\endcsname{Y si sumamos los grupos de atributos de a uno, con el Random Forest: solo con el primer ping, 29,4. Con la hoja de ruta baja a 27. Y el rastreo previo ya no mueve nada.}
+\expandafter\def\csname guion@resultados@porque\endcsname{¿Por qué? Porque falta GPS previo en el 42\,\% de los eventos.}
+\expandafter\def\csname guion@resultados@conclusion\endcsname{Conclusión: los modelos le ganan a la mediana, pero por poco. Hay señal, y todavía hay mucho para mejorar.}
+
+\expandafter\def\csname guion@jueves@reparto\endcsname{Para el jueves: Bauti presenta el corpus, Seba el árbol de decisión, y Davor el Random Forest.}
+\expandafter\def\csname guion@jueves@pendientes\endcsname{Y llevamos lo que falta: ajustar hiperparámetros, tratar los eventos del tope como datos censurados, separar desvíos cortos y largos como propone Grigorev, y confirmar si los desvíos contra hojas vencidas son válidos.}
+\expandafter\def\csname guion@jueves@cierre\endcsname{Ese es el trabajo: predecir, en el primer ping, cuánto va a durar un desvío.}
+
+\makeatother

@@ -1,0 +1,749 @@
+% =====================================================================
+% Predicción de la duración de desvíos de ruta · Lab. de IA · TP1
+% Presentación del Grupo 5 (Sebastián, Bautista y Davor) — Tecfield
+%
+% Compilar con pdfLaTeX (en Overleaf: menú > Compiler > pdfLaTeX).
+% Archivos del proyecto: presentacion.tex (este), tema-tp.sty (diseño),
+% guion.tex (texto del orador), logo-uncoma.png, logo-informatica.png.
+%
+% Guion del orador (texto de cada lámina, tomado del video): descomentar la
+% línea de abajo para generar un PDF solo con las notas, y volver a comentarla
+% para el PDF de la presentación:
+%   \setbeameroption{show only notes}
+% =====================================================================
+\documentclass[aspectratio=169,10pt]{beamer}
+\usepackage{tema-tp}
+\input{guion}
+%\setbeameroption{show only notes}
+
+% ------------------------------------------------------- Ayudas de dibujo
+% Barra rectangular: \barra{x}{y}{ancho}{alto}{color}
+\newcommand{\tmph}{h}
+\newcommand{\avatar}[1]{\tikz[baseline=(c.base)]\node[circle,fill=tpblue,text=white,inner sep=0pt,minimum size=0.5cm,font=\bfseries\tpTiny](c){#1};}
+\newcommand{\barra}[5]{\path[fill=#5,rounded corners=2.5pt] (#1,#2) rectangle (#1+#3,#2+#4);}
+% Nodo de árbol: \tn[opciones]{cx}{cy}{ancho}{alto}{texto}
+\newcommand{\tn}[6][]{\node[fill=tpcard,draw=tpborderhi,rounded corners=4pt,line width=0.6pt,
+  minimum width=#4cm,minimum height=#5cm,align=center,inner sep=2pt,text=tptext,#1] at (#2,#3) {#6};}
+% Arbolito de adorno: \minitree{x}{y}{escala}{color}
+\newcommand{\minitree}[4]{\begin{scope}[shift={(#1,#2)},scale=#3]
+  \draw[#4!60,line width=0.6pt] (0,0)--(-0.4,0.4) (0,0)--(0.4,0.4) (-0.4,0.4)--(-0.6,0.8) (-0.4,0.4)--(-0.2,0.8) (0.4,0.4)--(0.2,0.8) (0.4,0.4)--(0.6,0.8);
+  \fill[#4] (0,0) circle (0.07) (-0.4,0.4) circle (0.06) (0.4,0.4) circle (0.06);
+  \fill[#4!55] (-0.6,0.8) circle (0.05) (-0.2,0.8) circle (0.05) (0.2,0.8) circle (0.05) (0.6,0.8) circle (0.05);
+\end{scope}}
+
+% Ruta con desvío (diagrama del problema). \rutaplot{x}{y}{escala}
+\newcommand{\rutapath}{(0,2.7) .. controls (1.2,2.8) and (2.0,1.7) .. (3.6,1.6) .. controls (5.2,1.5) and (5.9,0.6) .. (7.8,0.4)}
+\newcommand{\rutaplot}[3]{\begin{scope}[shift={(#1,#2)},scale=#3]
+  \draw[line width=18pt,tpskyhi!85] \rutapath;
+  \draw[line width=2.2pt,tpblue] \rutapath;
+  \draw[tpbad,line width=1.5pt] plot[smooth] coordinates {(4.0,1.58) (4.4,2.25) (5.0,2.7) (5.7,2.75) (6.3,2.2) (6.6,1.3) (6.75,0.62)};
+  \foreach \p in {(4.4,2.25),(5.0,2.7),(5.7,2.75),(6.3,2.2),(6.6,1.3)}{\fill[tpbad] \p circle (0.075);}
+  \draw[tpbad,line width=0.9pt] (4.4,2.25) circle (0.17);
+  \draw[tpink,line width=1.1pt,fill=tpcard] (0,2.7) circle (0.13); \fill[tpink] (0,2.7) circle (0.05);
+  \fill[tpbluedeep,rounded corners=1.5pt] (7.68,0.28) rectangle (7.92,0.52);
+  \node[anchor=south,text=tpbluedeep] at (7.8,0.2) {\lab{Obra}};
+  \node[anchor=north west,text=tpmuted] at (-0.1,2.95) {\lab{Vehículo}};
+  \node[anchor=north west,text=tpbluedeep] at (1.7,3.0) {\lab{Hoja de ruta}};
+  \node[anchor=south west,text=tpmuted] at (1.0,1.45) {\lab{Banda de 500 m}};
+  \node[anchor=west,fill=tpbadbg,draw=tpbad!60,rounded corners=2pt,inner xsep=3pt,inner ysep=1.5pt,text=tpbad,font=\tpTiny\bfseries] at (4.75,3.1) {\T\ · primer ping};
+  \draw[tpbad!60,line width=0.5pt] (4.4,2.42) -- (4.75,3.0);
+\end{scope}}
+
+\begin{document}
+
+% =====================================================================
+% 1 · PORTADA
+% =====================================================================
+\begin{frame}[plain]
+\begin{lamina}
+  % ruta de fondo
+  \draw[line width=15pt,tpskyhi!70] (-0.3,8.0) .. controls (2,8.2) and (3,7.0) .. (5.5,7.35) .. controls (8,7.7) and (9,6.7) .. (11,6.9) .. controls (13,7.1) and (14.5,6.6) .. (16.3,6.4);
+  \draw[line width=2pt,tpblue] (-0.3,8.0) .. controls (2,8.2) and (3,7.0) .. (5.5,7.35) .. controls (8,7.7) and (9,6.7) .. (11,6.9) .. controls (13,7.1) and (14.5,6.6) .. (16.3,6.4);
+  \draw[tpbad,line width=1.4pt] plot[smooth] coordinates {(5.5,7.35) (6.2,8.0) (7.3,8.35) (8.3,8.1) (8.9,7.4) (9.2,6.95)};
+  \foreach \p in {(6.2,8.0),(7.3,8.35),(8.3,8.1),(8.9,7.4)}{\fill[tpbad] \p circle (0.07);}
+  \draw[tpink,fill=tpcard,line width=1.1pt] (0.9,8.05) circle (0.13); \fill[tpink] (0.9,8.05) circle (0.05);
+  \fill[tpbluedeep,rounded corners=1.5pt] (15.0,6.42) rectangle (15.25,6.67);
+
+  \node[anchor=north west] at (0.9,0.55) {\includegraphics[height=1.1cm]{logo-informatica.png}};
+  \node[anchor=north east] at (15.1,0.55) {\includegraphics[height=1.1cm]{logo-uncoma.png}};
+  \node[align=center,text=tpblue] at (8,2.1) {\lab{Facultad de Informática · UNComa}};
+  \node[align=center,text=tpink,text width=14cm] at (8,3.35) {\bfseries\tpHero Laboratorio de\\Inteligencia Artificial};
+  \node[align=center,text=tpmuted,text width=14cm] at (8,4.75) {\tpHthree TP1 · Predicción de la duración de desvíos de ruta};
+  \node at (8,5.5) {\chipsolid{Grupo 5}\hspace{4pt}\chip{Sebastián}\hspace{4pt}\chip{Bautista}\hspace{4pt}\chip{Davor}};
+  \node[text=tpdim,font=\ttfamily\tpTiny] at (8,6.05) {\textls[60]{CON TECFIELD · CURSADO 2026}};
+\end{lamina}
+\note{\g{intro}{hook} \g{intro}{tp}}
+\end{frame}
+
+% =====================================================================
+% 2 · QUÉ VAMOS A RECORRER
+% =====================================================================
+\begin{frame}
+\tpsec{Qué vamos a recorrer}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.4}{Mapa de la presentación}
+  \pbig{0.9}{1.75}{Cinco partes, \hl{tres voces}}
+  \draw[tpborderhi,line width=1.2pt] (2.2,3.9) -- (13.8,3.9);
+  \foreach \i/\t in {1/El problema,2/Los datos,3/El notebook,4/El corpus,5/Los modelos}{%
+    \pgfmathsetmacro{\x}{2.2+(\i-1)*2.9}
+    \num{\x}{3.9}{\i}
+    \node[font=\bfseries\tpSmall,text=tpink] at (\x,4.5) {\t};}
+  \card{0.9}{5.1}{4.5}{2.9}{%
+    \avatar{B}\ {\bfseries\tpSmall Bautista}\par\vspace{5pt}
+    \lab{Parte 1}\par\vspace{3pt}{\bfseries\tpHthree\hl{El corpus}}\par\vspace{3pt}{\tpSmall\color{tpmuted}De 37.720 eventos a una tabla para entrenar}}
+  \card{5.75}{5.1}{4.5}{2.9}{%
+    \avatar{S}\ {\bfseries\tpSmall Sebastián}\par\vspace{5pt}
+    \lab{Parte 2}\par\vspace{3pt}{\bfseries\tpHthree\hl{Árbol de decisión}}\par\vspace{3pt}{\tpSmall\color{tpmuted}Modelo 1 · interpretable}}
+  \card{10.6}{5.1}{4.5}{2.9}{%
+    \avatar{D}\ {\bfseries\tpSmall Davor}\par\vspace{5pt}
+    \lab{Parte 3}\par\vspace{3pt}{\bfseries\tpHthree\hl{Random Forest}}\par\vspace{3pt}{\tpSmall\color{tpmuted}Modelo 2 · 200 árboles}}
+\end{lamina}
+\note{\g{intro}{mapa} \g{intro}{jueves}}
+\end{frame}
+
+% =====================================================================
+% 3 · EL PROBLEMA
+% =====================================================================
+\begin{frame}
+\tpsec{El problema}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Tecfield · transporte de personal}
+  \card{0.9}{1.65}{5.2}{1.4}{\lab{La flota}\par\vspace{2pt}\tpSmall Tecfield lleva personal a obras y yacimientos}
+  \card{0.9}{3.15}{5.2}{1.4}{\lab{Hoja de ruta}\par\vspace{2pt}\tpSmall Cada vehículo tiene su recorrido planificado}
+  \card{0.9}{4.65}{5.2}{1.4}{\lab{Detector}\par\vspace{2pt}\tpSmall Compara la posición GPS contra ese recorrido}
+  \cardhi{0.9}{6.15}{5.2}{1.4}{\lab{Desvío}\par\vspace{2pt}\tpSmall A más de 500 m de la ruta registra lecturas de desvío}
+  \card{6.4}{1.65}{8.7}{5.9}{}
+  \rutaplot{6.95}{3.1}{1.0}
+  \cardhi{0.9}{7.7}{14.2}{1.0}{\tpSmall Al primer punto fuera de ruta lo llamamos \hl{\T}. En ese instante, nadie sabe cuánto va a durar el desvío.}
+\end{lamina}
+\note{\g{problema}{flota} \g{problema}{detector}}
+\end{frame}
+
+% =====================================================================
+% 4 · T0: DOS FUTUROS
+% =====================================================================
+\begin{frame}
+\tpsec{El problema}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{El primer ping}
+  \fill[tpbad] (1.05,2.75) circle (0.1);
+  \node[txt,text=tpblue] at (1.3,2.05) {\bfseries\tpHero\T};
+  \tx[mut]{0.9}{3.35}{4.6}{\tpSmall El primer punto fuera de ruta.\par Nadie sabe cuál de los dos viene.}
+  \card{6.3}{1.7}{8.8}{1.85}{%
+    \chip{Futuro 1}\ {\bfseries\tpBody Toma una calle alternativa y vuelve}}
+  \barra{6.6}{2.85}{8.2}{0.28}{tpsky}
+  \barra{6.6}{2.85}{0.5}{0.28}{tpok}
+  \node[anchor=west,text=tpok,font=\ttfamily\tpTiny] at (7.25,3.0) {$\approx$ 1 minuto};
+  \node[anchor=west,text=tpdim,font=\ttfamily\tpTiny] at (6.6,3.3) {0};
+  \node[anchor=east,text=tpdim,font=\ttfamily\tpTiny] at (14.8,3.3) {1 hora};
+  \card{6.3}{3.75}{8.8}{1.85}{%
+    \chip[tpbad]{Futuro 2}\ {\bfseries\tpBody Queda afuera de la ruta}}
+  \barra{6.6}{4.9}{8.2}{0.28}{tpsky}
+  \barra{6.6}{4.9}{7.4}{0.28}{tpbad!70}
+  \node[anchor=west,text=white,font=\ttfamily\tpTiny] at (6.75,5.04) {$\approx$ 1 hora o más};
+  \node[anchor=west,text=tpdim,font=\ttfamily\tpTiny] at (6.6,5.38) {0};
+  \node[anchor=east,text=tpdim,font=\ttfamily\tpTiny] at (14.8,5.38) {1 hora};
+  % volumen
+  \card{0.9}{5.85}{14.2}{2.3}{}
+  \node[txt,text=tpmuted] at (1.2,6.1) {\lab{El detector genera}};
+  \node[txt,text=tpink] at (1.2,6.45) {\bfseries\tpHone 100.000};
+  \node[txt,text=tpmuted] at (1.2,7.2) {\tpSmall lecturas de desvío por mes};
+  \foreach \r in {0,1}{\foreach \c in {0,...,13}{\fill[tpbad!55] (1.3+\c*0.32,7.75+\r*0.2) circle (0.065);}}
+  \node[txt,text=tpmuted] at (6.4,6.1) {\lab{Cola de alertas}};
+  \foreach \i in {0,1,2}{%
+    \path[fill=tpbg,draw=tpborder,rounded corners=4pt,line width=0.5pt] (6.4,6.45+\i*0.55) rectangle (14.8,6.9+\i*0.55);
+    \fill[tpbad] (6.65,6.675+\i*0.55) circle (0.06);
+    \node[anchor=west,font=\tpSmall] at (6.85,6.675+\i*0.55) {Alerta de desvío};
+    \node[anchor=east] at (14.6,6.675+\i*0.55) {\chipsolid{Prioridad igual}};}
+\end{lamina}
+\note{\g{problema}{t0} \g{problema}{volumen}}
+\end{frame}
+
+% =====================================================================
+% 5 · OBJETIVO: UNA REGRESIÓN
+% =====================================================================
+\begin{frame}
+\tpsec{El problema}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Objetivo}
+  \pbig{0.9}{1.6}{Una \hl{regresión}}
+  \card{0.9}{2.65}{6.9}{2.5}{%
+    \lab{No hay etiquetas del motivo}\par\vspace{5pt}
+    {\tpSmall\color{tpdim}%
+    \textcircled{\tiny1} \sout{Falla de GPS}\par\vspace{2pt}
+    \textcircled{\tiny2} \sout{Hoja de ruta mal configurada}\par\vspace{2pt}
+    \textcircled{\tiny3} \sout{Vehículo mal asignado}\par\vspace{2pt}
+    \textcircled{\tiny4} \sout{Recorrido distinto}}}
+  \cardc{tpok}{8.2}{2.65}{6.9}{2.5}{%
+    \lab{Lo que sí queda registrado}\par\vspace{5pt}
+    {\bfseries\tpHthree Cuánto duró el desvío}\par\vspace{2pt}
+    {\tpSmall\color{tpmuted}Siempre queda anotado.}}
+  \draw[tpok,line width=1.4pt] (8.8,4.35) -- (14.5,4.35);
+  \fill[tpbad] (8.8,4.35) circle (0.09); \fill[tpbad] (14.5,4.35) circle (0.09);
+  \node[anchor=north west,text=tpmuted,font=\ttfamily\tpTiny] at (8.6,4.55) {PRIMER PING};
+  \node[anchor=north east,text=tpmuted,font=\ttfamily\tpTiny] at (14.7,4.55) {ÚLTIMO PING};
+  \cardhi{0.9}{5.4}{6.4}{1.6}{\lab{Entrada · en \T}\par\vspace{2pt}{\tpSmall\color{tpmuted}Solo lo que se sabe hasta ese momento}\par\vspace{4pt}\chip{Primer ping}\ \chip{Hoja de ruta}\ \chip{Rastreo previo}}
+  \draw[flecha] (7.4,6.2) -- (8.2,6.2);
+  \node[fill=tpnavy,rounded corners=6pt,minimum width=1.5cm,minimum height=1.3cm,text=white,align=center,font=\bfseries\tpSmall] at (9.0,6.2) {$f(x)$\\[-1pt]{\mdseries\tpTiny Modelo}};
+  \draw[flecha] (9.8,6.2) -- (10.6,6.2);
+  \cardhi{10.7}{5.4}{4.4}{1.6}{\lab{Salida}\par\vspace{2pt}{\bfseries\tpBody Duración del desvío}\par\vspace{3pt}{\bfseries\tpHthree\hl{¿?} segundos}}
+  \path[fill=tpblue,rounded corners=6pt] (0.9,7.3) rectangle (15.1,8.1);
+  \node[anchor=west,text=white,font=\bfseries\tpBody] at (1.2,7.7) {Alerta temprana};
+  \node[anchor=east,text=white!85,font=\tpSmall] at (14.8,7.7) {En el primer ping, estimar cuánto va a durar.};
+\end{lamina}
+\note{\g{problema}{etiquetas} \g{problema}{objetivo}}
+\end{frame}
+
+% =====================================================================
+% 6 · QUÉ SE PREDICE
+% =====================================================================
+\begin{frame}
+\tpsec{Qué se predice}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{La variable objetivo}
+  \pbig{0.9}{1.6}{La unidad es el \hl{evento}, no la lectura}
+  \card{0.9}{2.65}{14.2}{2.9}{}
+  \node[anchor=north west,text=tpmuted,font=\ttfamily\tpTiny] at (1.2,2.85) {EVENTO = TODAS LAS LECTURAS DE UN MISMO \detokenize{grupoDesvioId}};
+  \draw[tpborderhi,line width=1pt] (1.5,4.35) -- (14.5,4.35);
+  \foreach \x in {2.0,2.9,3.6,5.0,6.3,7.4,8.8,10.2,11.1,12.6,13.9}{\fill[tpblue!70] (\x,4.35) circle (0.085);}
+  \draw[tpblue,line width=1pt,fill=tpcard] (2.0,4.35) circle (0.17);\fill[tpblue] (2.0,4.35) circle (0.085);
+  \draw[tpink,line width=1pt,fill=tpcard] (13.9,4.35) circle (0.17);\fill[tpink] (13.9,4.35) circle (0.085);
+  \node[anchor=south west,text=tpblue,font=\ttfamily\tpTiny] at (1.5,3.85) {\T\ · PRIMERA LECTURA (MÍNIMO)};
+  \node[anchor=south east,text=tpink,font=\ttfamily\tpTiny] at (14.5,3.85) {ÚLTIMA LECTURA (MÁXIMO)};
+  \draw[decorate,decoration={brace,amplitude=5pt,mirror},tpblue,line width=0.9pt] (2.0,4.7) -- (13.9,4.7);
+  \node[fill=tpblue,rounded corners=3pt,text=white,font=\ttfamily\tpSmall,inner xsep=6pt,inner ysep=3pt] at (7.95,5.2) {y = max(fechaHoraRastreo) $-$ min(fechaHoraRastreo)  [segundos]};
+  \card{0.9}{5.85}{4.55}{2.3}{\lab{Unidad de análisis}\par\vspace{2pt}\tpSmall El detector ya agrupa las lecturas de una misma salida de ruta con un identificador: \tmono{grupoDesvioId}.}
+  \cardc{tpwarn}{5.75}{5.85}{4.55}{2.3}{\lab{Ojo con el reloj}\par\vspace{2pt}\tpSmall Se usa \tmono{fechaHoraRastreo} (cuándo midió el GPS), no \tmono{timestamp} (cuándo escribió el detector).}
+  \card{10.6}{5.85}{4.5}{2.3}{\lab{El tope de 4 horas}\par\vspace{2pt}\tpSmall El detector corta a las 4 h: un evento que llega ahí no tiene un regreso a la ruta medido.}
+\end{lamina}
+\note{\g{evento}{unidad} \g{evento}{y} \g{evento}{reloj} \g{evento}{tope}}
+\end{frame}
+
+% =====================================================================
+% 7 · LOS DATOS
+% =====================================================================
+\begin{frame}
+\tpsec{Los datos}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Tres colecciones · exportadas de MongoDB · casi 2 GB de JSON}
+  \pbig{0.9}{1.6}{Los \hl{datos} de Tecfield}
+  \card{0.9}{2.65}{4.55}{2.6}{\tmono{desviosHojaRuta}\par\vspace{2pt}\chip{98 MB}\par\vspace{4pt}\tpSmall Las lecturas del detector. De acá salen los \textbf{eventos} y la \textbf{duración}.}
+  \card{5.75}{2.65}{4.55}{2.6}{\tmono{hojaDeRuta}\par\vspace{2pt}\chip{1,5 GB}\par\vspace{4pt}\tpSmall El plan del viaje: paradas, pasajeros y el trazado OSRM del recorrido.}
+  \card{10.6}{2.65}{4.5}{2.6}{\tmono{rastreoSatelital}\par\vspace{2pt}\chip{284 MB}\par\vspace{4pt}\tpSmall El GPS crudo de cada vehículo: lo que venía haciendo \textbf{antes} de \T.}
+  \node[txt,text=tpwarn] at (0.9,5.5) {\lab{Trampas que aparecieron al explorar}};
+  \foreach \i/\a/\b in {0/Coordenadas invertidas/{Desvíos: \texttt{[lat, lon]}. GPS: \texttt{[lon, lat]}},
+                        1/Fechas en hora universal/{Se pasan a la hora de Argentina},
+                        2/Tres nombres para el vehículo/{\texttt{flotaId}, \texttt{flotaID}, \texttt{vehiculo.id}},
+                        3/Hojas vencidas/{El 61\,\% de los desvíos cae fuera de la vigencia de su hoja},
+                        4/Desvíos repetidos/{Un mismo punto se guarda contra varias hojas}}{%
+    \pgfmathsetmacro{\x}{0.9+\i*2.875}
+    \cardc{tpwarn}{\x}{5.85}{2.7}{2.35}{{\bfseries\tpSmall\a}\par\vspace{3pt}{\tpTiny\color{tpmuted}\b}}}
+\end{lamina}
+\note{\g{datos}{tres} \g{datos}{desvios} \g{datos}{hojas} \g{datos}{rastreo} \g{datos}{trampas} \g{datos}{vigencia}}
+\end{frame}
+
+% =====================================================================
+% 8 · EL NOTEBOOK
+% =====================================================================
+\begin{frame}
+\tpsec{El notebook}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Todo el trabajo en un solo archivo}
+  \pbig{0.9}{1.6}{Un \hl{notebook} de marimo}
+  \node[anchor=north west] at (0.9,2.65) {\chipsolid{marimo}\ \chip{polars}\ \chip{altair}\ \chip{scikit-learn}};
+  \foreach \i/\n/\t/\d in {0/1/Explorar/{Qué hay en cada colección y qué trampas tiene},
+                           1/2/Armar el corpus/{Una fila por evento, con atributos en \T},
+                           2/3/Comparar modelos/{Mediana, árbol de decisión y Random Forest}}{%
+    \pgfmathsetmacro{\x}{0.9+\i*4.95}
+    \card{\x}{3.3}{4.3}{1.7}{{\color{tpblue}\bfseries\tpHthree\n}\ \ {\bfseries\tpBody\t}\par\vspace{3pt}{\tpSmall\color{tpmuted}\d}}}
+  \draw[flecha] (5.25,4.15) -- (5.8,4.15);
+  \draw[flecha] (10.2,4.15) -- (10.75,4.15);
+  \card{0.9}{5.35}{4.55}{2.8}{\lab{Carga}\par\vspace{3pt}\tpSmall Lee los JSON de a un documento. De las hojas de ruta descarta la geometría: es casi todo el peso.}
+  \card{5.75}{5.35}{4.55}{2.8}{\lab{Limpieza}\par\vspace{3pt}\tpSmall Fechas a hora de Argentina, coordenadas acomodadas y un solo nombre para el vehículo: \tmono{flota}.}
+  \cardhi{10.6}{5.35}{4.5}{2.8}{\lab{Reactivo}\par\vspace{3pt}\tpSmall Un selector de atributos: sacás uno, el modelo se entrena de nuevo solo y muestra cómo cambia el error.}
+\end{lamina}
+\note{\g{notebook}{marimo} \g{notebook}{partes} \g{notebook}{carga} \g{notebook}{limpieza} \g{notebook}{reactivo}}
+\end{frame}
+
+% =====================================================================
+% 9 · CÓMO SE ARMA EL CORPUS (Bautista)
+% =====================================================================
+\begin{frame}
+\tpsec{Cómo se arma el corpus}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Una fila por desvío · atributos en \T\ y la duración}
+  \pbig{0.9}{1.6}{Siete pasos para armar el \hl{corpus}}
+  \foreach \i/\t/\d in {1/Lecturas válidas/{Se tiran las de posición \texttt{[0, 0]} o con fecha fuera de 2025--2026.},
+                        2/Un registro por evento/{Se agrupa por \tmono{grupoDesvioId}. \T\ es el primer ping: distancia, velocidad y posición.},
+                        3/Hoja de ruta/{Se cruza con la hoja: obra, tipo de vehículo, largo y duración OSRM, vigencia.},
+                        4/Sin repetidos/{Uno por vehículo y \T, prefiriendo la hoja vigente.}}{%
+    \pgfmathsetmacro{\y}{2.65+(\i-1)*1.4}
+    \num{1.2}{\y+0.3}{\i}
+    \node[txt,text width=6.4cm] at (1.7,\y) {{\bfseries\tpBody\t}\par\vspace{2pt}{\tpSmall\color{tpmuted}\d}};}
+  \foreach \i/\t/\d in {5/Rastreo previo/{El GPS de los 10 minutos antes de \T\ (\tmono{join_asof}), sin tocar el propio \T.},
+                        6/Fecha y hora/{Hora, día de la semana y franja del día.},
+                        7/Filtro final/{2 lecturas o más, duración mayor a 0 y menos de 4 horas.}}{%
+    \pgfmathsetmacro{\y}{2.65+(\i-5)*1.4}
+    \num{8.7}{\y+0.3}{\i}
+    \node[txt,text width=5.9cm] at (9.2,\y) {{\bfseries\tpBody\t}\par\vspace{2pt}{\tpSmall\color{tpmuted}\d}};}
+  \cardc{tpok}{8.5}{6.65}{6.6}{1.45}{\lab{Sin fugas}\par\vspace{2pt}\tpSmall Solo se usa información de \T\ o anterior. Nada del final del desvío.}
+\end{lamina}
+\note{\g{corpus}{intro} \g{corpus}{p1} \g{corpus}{p2} \g{corpus}{p3} \g{corpus}{p5} \g{corpus}{p6}}
+\end{frame}
+
+% =====================================================================
+% 10 · DE EVENTOS A CORPUS (Bautista)
+% =====================================================================
+\begin{frame}
+\tpsec{De eventos a corpus}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Cuántos eventos quedan}
+  \pbig{0.9}{1.6}{De 37.720 eventos a \hl{13.632}}
+  % barras: N = 37.720 eventos ≙ 9,6 cm, desde x = 5,0
+  \node[txt,text=tpink] at (0.9,2.7) {\bfseries\tpHthree 37.720};
+  \node[txt,text=tpmuted] at (0.9,3.15) {\tpTiny eventos de partida};
+  \barra{5.0}{2.75}{9.6}{0.5}{tpskyhi}
+  \node[txt,text=tpmuted] at (0.9,3.85) {\bfseries\tpHthree$-$2.007};
+  \node[txt,text=tpmuted] at (0.9,4.3) {\tpTiny repetidos};
+  \barra{14.09}{3.9}{0.51}{0.5}{tpdim}
+  \node[txt,text=tpmuted] at (0.9,5.0) {\bfseries\tpHthree$-$19.240};
+  \node[txt,text=tpmuted] at (0.9,5.45) {\tpTiny una sola lectura o duración 0};
+  \barra{9.19}{5.05}{4.9}{0.5}{tpdim}
+  \node[txt,text=tpwarn] at (0.9,6.15) {\bfseries\tpHthree$-$2.841};
+  \node[txt,text=tpwarn] at (0.9,6.6) {\tpTiny tope de 4 horas};
+  \barra{8.47}{6.2}{0.72}{0.5}{tpwarn}
+  \draw[flecha,tpwarn] (9.4,6.45) -- (9.95,6.45);
+  \cardc{tpwarn}{10.05}{5.85}{5.05}{1.3}{\chipsolid[tpwarn]{Aparte}\ {\bfseries\tpSmall No se tiran}\par\vspace{1pt}{\tpTiny\color{tpmuted}El detector cortó: no hay retorno medido.}}
+  \node[txt,text=tpblue] at (0.9,7.25) {\bfseries\tpHone 13.632};
+  \node[txt,text=tpblue] at (0.9,8.0) {\bfseries\tpTiny eventos en el corpus};
+  \barra{5.0}{7.3}{3.47}{0.7}{tpblue}
+  \node[anchor=west,text=tpink,font=\bfseries\tpHthree] at (8.75,7.65) {de \hl{556} vehículos};
+\end{lamina}
+\note{\g{embudo}{inicio} \g{embudo}{repetidos} \g{embudo}{cortos} \g{embudo}{tope} \g{embudo}{quedan}}
+\end{frame}
+
+% =====================================================================
+% 11 · ATRIBUTOS EN T0 (Bautista)
+% =====================================================================
+\begin{frame}
+\tpsec{Atributos en \T}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Atributos candidatos · todos se conocen en \T}
+  \pbig{0.9}{1.6}{Los atributos vienen de \hl{tres lugares}}
+  \cardhi{0.9}{2.65}{4.55}{3.45}{{\color{tpblue}\bfseries\tpHthree 1}\ {\bfseries\tpBody Primer ping}\par\vspace{1pt}{\tpTiny\color{tpmuted}Lo que mide el primer GPS fuera de ruta}\par\vspace{5pt}
+    \chip{distancia\_m}\ \chip{velocidad}\ \chip{velocidad\_vacia}\ \chip{ruta\_cercana}\ \chip{lat}\ \chip{lon}\ \chip{hora}\ \chip{dia\_semana}\ \chip{franja}}
+  \card{5.75}{2.65}{4.55}{3.45}{{\color{tpblue}\bfseries\tpHthree 2}\ {\bfseries\tpBody Hoja de ruta}\par\vspace{1pt}{\tpTiny\color{tpmuted}Lo que dice la hoja del viaje}\par\vspace{5pt}
+    \chip{tipoVehiculo}\ \chip{tipoHDR}\ \chip{obra\_id}\ \chip{km\_ida}\ \chip{min\_ida}\ \chip{plazas}\ \chip{pasajeros}\ \chip{hoja\_vigente}}
+  \card{10.6}{2.65}{4.5}{3.45}{{\color{tpblue}\bfseries\tpHthree 3}\ {\bfseries\tpBody Rastreo previo}\par\vspace{1pt}{\tpTiny\color{tpmuted}Qué hizo en los 10 min anteriores}\par\vspace{5pt}
+    \chip{gps\_previos}\ \chip{vel\_media\_previa}\ \chip{vel\_ultima}\ \chip{min\_desde\_ultimo\_gps}\ \chip{desplaz\_previo\_m}\ \chip{rumbo\_previo}}
+  \cardc{tpbad}{0.9}{6.35}{14.2}{1.85}{}
+  \node[txt,text=tpbad] at (1.2,6.6) {\bfseries\tpHthree Fugas: nunca entran};
+  \node[anchor=north east,text=tpbad!80,font=\tpSmall] at (14.8,6.65) {Sería hacer trampa};
+  \foreach \i/\a/\b/\sx in {0/retorno.*/Cómo terminó el desvío/1,1/lecturas/Cuántas lecturas tuvo/1,2/GPS posterior a \T/Cualquier dato posterior/0}{%
+    \pgfmathsetmacro{\x}{1.2+\i*4.65}
+    \path[fill=tpcard,draw=tpbad!40,rounded corners=4pt,line width=0.5pt] (\x,7.15) rectangle (\x+4.3,8.0);
+    \ifnum\sx=1
+      \node[anchor=west,font=\ttfamily\tpSmall,text=tpbad] at (\x+0.2,7.4) {\sout{\a}};
+    \else
+      \node[anchor=west,font=\ttfamily\tpSmall,text=tpbad] at (\x+0.2,7.4) {\a};
+    \fi
+    \node[anchor=west,font=\tpTiny,text=tpmuted] at (\x+0.2,7.78) {\b};}
+\end{lamina}
+\note{\g{atributos}{grupos} \g{atributos}{ping} \g{atributos}{hoja} \g{atributos}{previo} \g{atributos}{fugas}}
+\end{frame}
+
+% =====================================================================
+% 12 · CÓMO SON LAS DURACIONES (Bautista)
+% =====================================================================
+\begin{frame}
+\tpsec{Cómo son las duraciones}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Duración de los desvíos · 13.632 eventos}
+  \pbig{0.9}{1.6}{¿Cómo son las \hl{duraciones}?}
+  \card{0.9}{2.65}{9.7}{5.55}{}
+  % histograma (10 min por barra, 0--240 min)
+  \foreach \val [count=\i from 0] in {3707,2818,1553,987,853,688,468,383,282,230,207,171,185,130,146,134,102,118,91,102,80,61,74,62}{%
+    \pgfmathsetmacro{\h}{\val/3707*3.1}
+    \pgfmathsetmacro{\x}{1.4+\i*0.34}
+    \ifnum\i<12
+      \path[fill=tpblue,rounded corners=0.5pt] (\x,7.25-\h) rectangle (\x+0.3,7.25);
+    \else
+      \path[fill=tpwarn,rounded corners=0.5pt] (\x,7.25-\h) rectangle (\x+0.3,7.25);
+    \fi}
+  \draw[tpborderhi,line width=0.6pt] (1.35,7.28) -- (9.6,7.28);
+  \foreach \m in {0,30,60,120,240}{%
+    \pgfmathsetmacro{\x}{1.4+\m/10*0.34}
+    \node[anchor=north,text=tpdim,font=\ttfamily\tpTiny] at (\x,7.35) {\m};}
+  \node[anchor=north,text=tpmuted,font=\tpTiny] at (5.4,7.65) {Duración del desvío (min) · cada barra junta 10 min};
+  \draw[tpink,line width=0.7pt] (2.1,3.35) -- (2.1,7.2);
+  \node[anchor=west,fill=tpink,rounded corners=2pt,text=white,font=\ttfamily\tpTiny,inner xsep=4pt,inner ysep=2pt] at (2.2,3.4) {mediana · 20,4 min};
+  \draw[tpmuted,line width=0.5pt] (3.2,4.55) -- (3.2,7.2);
+  \node[anchor=west,fill=tpcard,draw=tpmuted,rounded corners=2pt,text=tpmuted,font=\ttfamily\tpTiny,inner xsep=3pt,inner ysep=1.5pt] at (3.3,4.6) {p75 · 53 min};
+  \draw[decorate,decoration={brace,amplitude=3pt},tpwarn,line width=0.8pt] (5.48,6.35) -- (9.55,6.35);
+  \node[anchor=south,text=tpwarn,font=\ttfamily\tpTiny,align=center] at (7.5,5.6) {COLA LARGA:\\9 \% DE LOS EVENTOS PASA DE 2 H};
+  \card{10.9}{2.65}{4.2}{1.6}{\lab{La mitad}\par\vspace{2pt}\tpSmall dura menos de 20 minutos. Cuartiles: 10 y 53 min.}
+  \cardc{tpwarn}{10.9}{4.4}{4.2}{1.6}{\lab{Pocos eventos, muy largos}\par\vspace{2pt}\tpSmall La media (42 min) duplica a la mediana.}
+  \cardhi{10.9}{6.15}{4.2}{2.05}{\lab{Los modelos aprenden}\par\vspace{3pt}{\ttfamily\tpSmall z = log(1 + y)}\par\vspace{3pt}{\tpTiny\color{tpmuted}Al predecir se vuelve a segundos: y = exp(z) $-$ 1}}
+\end{lamina}
+\note{\g{duracion}{forma} \g{duracion}{cola}}
+\end{frame}
+
+% =====================================================================
+% 13 · CÓMO SE EVALÚA
+% =====================================================================
+\begin{frame}
+\tpsec{Cómo se evalúa}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Referencia, métricas y validación}
+  \pbig{0.9}{1.6}{La referencia: \hl{la mediana}}
+  % 1 · referencia
+  \card{0.9}{2.6}{4.55}{3.75}{\lab{Referencia}\par\vspace{2pt}{\bfseries\tpSmall Predecir siempre la mediana}}
+  \draw[tpblue,line width=1.2pt] (1.2,4.85) -- (5.2,4.85);
+  \foreach \p in {(1.5,5.2),(1.8,4.95),(2.1,5.3),(2.4,4.5),(2.7,5.1),(3.0,3.9),(3.3,5.25),(3.6,4.95),(3.9,4.3),(4.2,5.3),(4.5,4.9),(4.8,3.75),(5.0,5.1)}{\fill[tpblue!70] \p circle (0.055);}
+  \node[txt,text=tpink] at (1.2,5.4) {\bfseries\tpHone 32,1};
+  \tx[mut]{3.05}{5.5}{2.3}{\tpTiny min de error medio (MAE) de la referencia}
+  % 2 · métricas
+  \card{5.75}{2.6}{4.55}{3.75}{\lab{Métricas}\par\vspace{2pt}{\bfseries\tpSmall Error medio y error mediano}\par{\tpTiny\color{tpmuted}5 eventos de ejemplo, en minutos}}
+  \foreach \i/\e in {0/14,1/61,2/4,3/22,4/9}{%
+    \pgfmathsetmacro{\y}{4.1+\i*0.28}
+    \pgfmathsetmacro{\w}{\e/61*3.4}
+    \barra{6.1}{\y}{\w}{0.2}{tpskyhi}}
+  \draw[tpblue,line width=0.9pt] (6.1+22/61*3.4,4.0) -- (6.1+22/61*3.4,5.5);
+  \draw[tpink,line width=0.9pt,dashed] (6.1+14/61*3.4,4.0) -- (6.1+14/61*3.4,5.5);
+  \node[anchor=north west,text=tpblue,font=\ttfamily\tpTiny] at (6.1+22/61*3.4+0.08,5.5) {MAE = 22 (media)};
+  \node[anchor=north west,text=tpink,font=\ttfamily\tpTiny] at (6.1,5.75) {mediano = 14 (el del medio)};
+  % 3 · validación
+  \card{10.6}{2.6}{4.5}{3.75}{\lab{Validación cruzada}\par\vspace{2pt}{\bfseries\tpSmall 5 particiones por vehículo}}
+  \foreach \f [count=\k from 0] in {0,3,1,4,2,0,2,4,1,3,0,4,3,1,2,1,2,0,3,4,4,0,1,2}{%
+    \pgfmathtruncatemacro{\r}{int(\k/6)}
+    \pgfmathtruncatemacro{\c}{mod(\k,6)}
+    \pgfmathsetmacro{\x}{10.95+\c*0.62}
+    \pgfmathsetmacro{\y}{3.85+\r*0.42}
+    \ifcase\f\def\col{tpblue}\or\def\col{tpnavy}\or\def\col{tpblue!55}\or\def\col{tpmuted}\or\def\col{tpok!70}\fi
+    \path[fill=\col,rounded corners=2pt] (\x,\y) rectangle (\x+0.48,\y+0.32);}
+  \tx[mut]{10.9}{5.65}{3.9}{\tpTiny Nunca en entrenamiento y prueba a la vez.}
+  % comparación
+  \node[txt,text=tpmuted] at (0.9,6.65) {\lab{Contra esa referencia comparamos dos modelos}};
+  \card{0.9}{7.0}{4.55}{1.2}{{\bfseries\tpBody Árbol de decisión}\par\vspace{1pt}{\tpTiny\color{tpmuted}Modelo 1}}
+  \card{5.75}{7.0}{4.55}{1.2}{{\bfseries\tpBody Random Forest}\par\vspace{1pt}{\tpTiny\color{tpmuted}Modelo 2}}
+\end{lamina}
+\note{\g{evaluacion}{baseline} \g{evaluacion}{metricas} \g{evaluacion}{grupos} \g{evaluacion}{dos}}
+\end{frame}
+
+% =====================================================================
+% 14 · ÁRBOL DE DECISIÓN: QUÉ ES (Sebastián)
+% =====================================================================
+\begin{frame}
+\tpsec{Árbol de decisión}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Modelo 1}
+  \pbig{0.9}{1.6}{Árbol de \hl{decisión}}
+  \card{0.9}{2.65}{5.2}{1.1}{\lab{Nodo}\par\vspace{2pt}\tpSmall Una pregunta sobre un atributo.}
+  \card{0.9}{3.9}{5.2}{1.4}{\lab{Rama}\par\vspace{2pt}\tpSmall La respuesta: sí o no. Lleva al nodo siguiente.}
+  \card{0.9}{5.45}{5.2}{1.1}{\lab{Hoja}\par\vspace{2pt}\tpSmall Donde termina el recorrido.}
+  \cardhi{0.9}{6.7}{5.2}{1.45}{\lab{Predicción}\par\vspace{2pt}\tpSmall Promedio de los eventos de entrenamiento de esa hoja.}
+  \card{6.4}{2.65}{8.7}{5.5}{}
+  \tn{10.75}{3.45}{2.6}{0.62}{\tpSmall ¿atributo $\leq$ umbral?}
+  \tn{8.4}{4.95}{2.4}{0.62}{\tpSmall ¿atributo $\leq$ umbral?}
+  \tn{13.1}{4.95}{2.4}{0.62}{\tpSmall ¿atributo $\leq$ umbral?}
+  \draw[tpborderhi,line width=0.9pt] (10.0,3.76) -- (8.9,4.64) (11.5,3.76) -- (12.6,4.64) (7.7,5.26) -- (7.4,6.2) (9.1,5.26) -- (9.7,6.2) (12.4,5.26) -- (12.0,6.2) (13.8,5.26) -- (14.1,6.2);
+  \draw[tpblue,line width=2pt] (10.0,3.76) -- (8.9,4.64) (9.1,5.26) -- (9.7,6.2);
+  \node[fill=tpcard,text=tpmuted,font=\ttfamily\tpTiny,inner sep=1pt] at (9.2,4.1) {sí};
+  \node[fill=tpcard,text=tpmuted,font=\ttfamily\tpTiny,inner sep=1pt] at (12.3,4.1) {no};
+  \foreach \x/\hi in {7.3/0,9.8/1,12.0/0,14.1/0}{%
+    \ifnum\hi=1
+      \path[fill=tpsky,draw=tpblue,rounded corners=4pt,line width=0.9pt] (\x-0.75,6.2) rectangle (\x+0.75,7.7);
+      \node[font=\bfseries\tpTiny,text=tpblue] at (\x,7.4) {promedio};
+    \else
+      \path[fill=tpcard,draw=tpborderhi,rounded corners=4pt,line width=0.6pt] (\x-0.75,6.2) rectangle (\x+0.75,7.7);
+      \node[font=\ttfamily\tpTiny,text=tpdim] at (\x,7.4) {duración};
+    \fi
+    \foreach \dx/\dy in {-0.3/0.0,0.0/0.2,0.3/0.05,-0.1/0.4}{\fill[tpblue!45] (\x+\dx,6.7+\dy) circle (0.07);}}
+  \node[anchor=north east,text=tpdim,font=\ttfamily\tpTiny] at (14.9,2.8) {EJEMPLO ILUSTRATIVO};
+\end{lamina}
+\note{\g{arbol}{que} \g{arbol}{hoja}}
+\end{frame}
+
+% =====================================================================
+% 15 · EL ÁRBOL REAL (Sebastián)
+% =====================================================================
+\begin{frame}
+\tpsec{Árbol de decisión}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Nuestro árbol · entrenado con los 13.632 eventos}
+  \pbig{0.9}{1.6}{¿Trae el \hl{tipo de hoja}?}
+  \draw[tpblue,line width=1.8pt] (5.8,3.6) -- (3.3,4.3);
+  \draw[tpborderhi,line width=1.2pt] (5.8,3.6) -- (8.3,4.3);
+  \draw[tpborderhi,line width=1.2pt] (3.3,5.5) -- (2.05,6.05) (3.3,5.5) -- (4.55,6.05) (8.3,5.5) -- (7.05,6.05) (8.3,5.5) -- (9.55,6.05);
+  \node[fill=tpbg,text=tpbluedeep,font=\ttfamily\tpTiny,inner sep=1.5pt] at (4.4,3.9) {sí};
+  \node[fill=tpbg,text=tpmuted,font=\ttfamily\tpTiny,inner sep=1.5pt] at (7.2,3.9) {no};
+  \tn[draw=tpblue,line width=1pt,fill=tpsky]{5.8}{3.15}{4.2}{0.9}{{\bfseries\tpSmall ¿\tmono{tipoHDR} informado?}\\[1pt]{\tpTiny\color{tpmuted}13.632 eventos · mediana 20 min}}
+  \tn{3.3}{4.9}{4.1}{1.2}{{\ttfamily\tpTiny CON TIPO · 6.828 EVENTOS}\\[1pt]{\bfseries\tpBody\hl{mediana 40 min}}\\[1pt]{\tpTiny ¿distancia $\leq$ 2.938 m?}}
+  \tn{8.3}{4.9}{4.1}{1.2}{{\ttfamily\tpTiny SIN TIPO · 6.804 EVENTOS}\\[1pt]{\bfseries\tpBody\hl{mediana 14 min}}\\[1pt]{\tpTiny ¿distancia $\leq$ 1.888 m?}}
+  \tn{2.05}{6.55}{2.3}{0.9}{{\tpTiny ¿velocidad $\leq$ 33,5?}\\[1pt]{\bfseries\tpTiny\hl{mediana 33 min}}}
+  \tn{4.55}{6.55}{2.3}{0.9}{{\tpTiny ¿latitud $\leq$ $-$38,75?}\\[1pt]{\bfseries\tpTiny\hl{mediana 50 min}}}
+  \tn{7.05}{6.55}{2.3}{0.9}{{\tpTiny ¿latitud $\leq$ $-$39,16?}\\[1pt]{\bfseries\tpTiny\hl{mediana 10 min}}}
+  \tn{9.55}{6.55}{2.3}{0.9}{{\tpTiny ¿dist. $\leq$ 13.958 m?}\\[1pt]{\bfseries\tpTiny\hl{mediana 16 min}}}
+  \foreach \x in {2.05,4.55,7.05,9.55}{\draw[tpborderhi,line width=0.9pt,dash pattern=on 2pt off 2pt] (\x,7.0) -- (\x,7.55);
+    \node[text=tpdim,font=\tpBody] at (\x,7.75) {$\vdots$};}
+  \node[anchor=north west,text=tpmuted,font=\ttfamily\tpTiny] at (0.9,8.15) {Y SIGUE HASTA 8 NIVELES DE PROFUNDIDAD};
+  \card{11.4}{2.65}{3.7}{5.5}{\lab{Cómo lo limitamos}\par\vspace{6pt}
+    {\bfseries\tpHone\hl{8}}\par{\tpTiny\color{tpmuted}niveles de profundidad}\par\vspace{6pt}
+    {\bfseries\tpHone\hl{30}}\par{\tpTiny\color{tpmuted}eventos por hoja, como mínimo}\par\vspace{6pt}
+    {\bfseries\tpHone\hl{153}}\par{\tpTiny\color{tpmuted}hojas en total}\par\vspace{8pt}
+    {\tpTiny\color{tpmuted}\ttfamily DecisionTreeRegressor}}
+\end{lamina}
+\note{\g{arbol}{real} \g{arbol}{config}}
+\end{frame}
+
+% =====================================================================
+% 16 · ÁRBOL: RESULTADO, VENTAJA Y LÍMITE (Sebastián)
+% =====================================================================
+\begin{frame}
+\tpsec{Árbol de decisión}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Error medio (MAE) · en minutos}
+  \pbig{0.9}{1.6}{Resultado: \hl{28,8 minutos}}
+  \card{0.9}{2.65}{6.7}{3.3}{}
+  \node[txt,text=tpmuted] at (1.2,3.0) {\tpSmall Mediana};
+  \barra{3.4}{2.95}{3.9}{0.4}{tpborderhi}
+  \node[anchor=east,text=tpmuted,font=\bfseries\tpSmall] at (7.2,3.15) {32,1};
+  \node[txt,text=tpblue] at (1.2,3.7) {\bfseries\tpSmall Árbol};
+  \barra{3.4}{3.65}{3.5}{0.4}{tpblue}
+  \node[anchor=east,text=white,font=\bfseries\tpSmall] at (6.8,3.85) {28,8};
+  \node[txt,text=tpmuted] at (1.2,4.45) {\tpTiny Error mediano: 15,0 min (mediana) $\rightarrow$ 14,4 min (árbol)};
+  \node[anchor=north west] at (1.2,5.05) {\chipsolid[tpok]{10 \% mejor que la mediana}};
+  \cardhi{7.9}{2.65}{7.2}{3.3}{\lab{Árbol de decisión}\par\vspace{2pt}{\bfseries\tpHero\hl{28,8}\ {\tpBody min}}\par\vspace{2pt}{\tpSmall\color{tpmuted}de error medio por evento}}
+  \cardc{tpok}{0.9}{6.2}{6.7}{2.1}{{\bfseries\tpBody\color{tpok}Ventaja}\par\vspace{1pt}{\bfseries\tpBody Se puede dibujar y explicar}\par\vspace{3pt}
+    {\tpTiny\color{tpmuted}Ejemplo: ¿tipoHDR informado? sí $\rightarrow$ ¿distancia $\leq$ 2.938 m? sí $\rightarrow$ ¿velocidad $\leq$ 33,5? no $\rightarrow$ $\approx$ 37 min}}
+  \cardc{tpwarn}{7.9}{6.2}{7.2}{2.1}{{\bfseries\tpBody\color{tpwarn}Límite}\par\vspace{1pt}{\bfseries\tpBody Un solo árbol es inestable}\par\vspace{3pt}
+    {\tpTiny\color{tpmuted}Un cambio chico en los datos de entrenamiento le cambia toda la estructura: otra raíz, otras preguntas.}}
+\end{lamina}
+\note{\g{arbol}{resultado} \g{arbol}{limites}}
+\end{frame}
+
+% =====================================================================
+% 17 · RANDOM FOREST: QUÉ ES (Davor)
+% =====================================================================
+\begin{frame}
+\tpsec{Random Forest}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Modelo 2}
+  \pbig{0.9}{1.6}{Random \hl{Forest}}
+  \tx[mut]{0.9}{2.6}{5.2}{\tpSmall Un bosque de árboles de decisión, no uno solo.}
+  \node[txt,text=tpblue] at (0.9,3.4) {\bfseries\tpHero 200};
+  \node[txt,text=tpmuted] at (3.35,4.1) {\tpBody árboles};
+  \card{0.9}{4.95}{5.2}{1.55}{\lab{Cada árbol, una muestra distinta}\par\vspace{2pt}\tpSmall Se entrena con eventos elegidos al azar, con repetición.}
+  \card{0.9}{6.65}{5.2}{1.55}{\lab{Cada pregunta, atributos distintos}\par\vspace{2pt}\tpSmall En cada pregunta mira solo un subconjunto de los atributos.}
+  \card{6.4}{1.7}{8.7}{3.0}{}
+  \foreach \r in {0,1,2}{\foreach \c in {0,...,7}{%
+    \pgfmathsetmacro{\x}{7.1+\c*1.0}
+    \pgfmathsetmacro{\y}{2.05+\r*0.85}
+    \minitree{\x}{\y}{0.55}{tpblue}}}
+  \node[anchor=south east,text=tpmuted,font=\ttfamily\tpTiny] at (14.9,4.6) {200 ÁRBOLES DISTINTOS};
+  \card{6.4}{4.9}{8.7}{3.3}{}
+  \node[txt,text=tpmuted] at (6.7,5.1) {\lab{Tabla de entrenamiento}};
+  \node[anchor=north east,text=tpdim,font=\ttfamily\tpTiny] at (14.8,5.1) {FILA = EVENTO · COLUMNA = ATRIBUTO};
+  \foreach \c/\n in {0/tipoHDR,1/distancia,2/lat,3/lon,4/velocidad,5/obra}{%
+    \pgfmathsetmacro{\x}{7.4+\c*1.2}
+    \node[font=\ttfamily\tpTiny,text=tpmuted] at (\x+0.5,5.65) {\n};}
+  \foreach \r in {0,...,6}{\foreach \c in {0,...,5}{%
+    \pgfmathsetmacro{\x}{7.4+\c*1.2}
+    \pgfmathsetmacro{\y}{5.9+\r*0.3}
+    \path[fill=tpsky,rounded corners=1.5pt] (\x,\y) rectangle (\x+1.0,\y+0.22);}}
+  \foreach \r in {1,3,5}{\path[fill=tpblue,opacity=0.18,rounded corners=1.5pt] (7.3,5.9+\r*0.3-0.03) rectangle (14.7,5.9+\r*0.3+0.25);}
+  \foreach \c in {1,2,4}{\path[draw=tpblue,line width=0.9pt,rounded corners=3pt] (7.35+\c*1.2,5.8) rectangle (8.45+\c*1.2,7.95);}
+\end{lamina}
+\note{\g{bosque}{que} \g{bosque}{azar}}
+\end{frame}
+
+% =====================================================================
+% 18 · RANDOM FOREST: PROMEDIO (Davor)
+% =====================================================================
+\begin{frame}
+\tpsec{Random Forest}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{La predicción final}
+  \node[anchor=north west] at (3.6,1.22) {\chip[tpwarn]{ejemplo ilustrativo}};
+  \pbig{0.9}{1.6}{Cada árbol se equivoca \hl{distinto}}
+  \foreach \i/\val in {0/18,1/31,2/24,3/27}{%
+    \pgfmathsetmacro{\x}{0.9+\i*2.55}
+    \card{\x}{2.6}{2.3}{1.15}{\lab{Árbol \the\numexpr\i+1\relax}\par\vspace{2pt}{\bfseries\tpHthree\val}\ {\tpSmall min}}}
+  \card{10.95}{2.6}{4.15}{1.15}{{\bfseries\tpSmall\color{tpmuted}$\cdots$ y 196 árboles más}}
+  \foreach \x in {2.05,4.6,7.15,9.7}{\draw[flechag] (\x,3.8) -- (7.55,4.3);}
+  \cardhi{4.6}{4.3}{5.9}{1.5}{\lab{Promedio de los 200 · predicción final}\par\vspace{2pt}{\bfseries\tpHone\hl{25}\ {\tpSmall min}}}
+  \card{0.9}{6.05}{14.2}{2.15}{}
+  \node[txt,text=tpmuted] at (1.2,6.25) {\tpTiny Errores respecto del valor real: $-$8, $+$5, $-$2, $+$1. Al promediar se compensan en parte.};
+  \draw[tpborderhi,line width=0.8pt] (1.5,7.35) -- (14.5,7.35);
+  \foreach \m in {15,20,25,30,35,40}{%
+    \pgfmathsetmacro{\x}{1.5+(\m-15)/25*13}
+    \draw[tpborderhi,line width=0.6pt] (\x,7.3) -- (\x,7.4);
+    \node[anchor=north,text=tpdim,font=\ttfamily\tpTiny] at (\x,7.45) {\m};}
+  \pgfmathsetmacro{\xr}{1.5+(26-15)/25*13}
+  \draw[tpink,dashed,line width=0.8pt] (\xr,6.75) -- (\xr,7.35);
+  \node[anchor=south,text=tpink,font=\ttfamily\tpTiny] at (\xr,6.72) {valor real: 26 min};
+  \foreach \m/\d/\dy in {18/$-$8/6.85,31/$+$5/6.85,24/$-$2/7.1,27/$+$1/7.1}{%
+    \pgfmathsetmacro{\x}{1.5+(\m-15)/25*13}
+    \draw[tpbad!60,line width=0.6pt] (\x,\dy+0.1) -- (\x,7.35);
+    \fill[tpcard] (\x,\dy) circle (0.1);
+    \draw[tpbad,line width=0.9pt] (\x,\dy) circle (0.1);
+    \node[anchor=south,text=tpbad,font=\ttfamily\tpTiny] at (\x,\dy-0.12) {\d};}
+  \pgfmathsetmacro{\xp}{1.5+(25-15)/25*13}
+  \fill[tpblue] (\xp,7.35) circle (0.13);
+  \node[anchor=north,text=tpblue,font=\bfseries\tpTiny] at (\xp,7.72) {promedio: $-$1};
+\end{lamina}
+\note{\g{bosque}{promedio}}
+\end{frame}
+
+% =====================================================================
+% 19 · RANDOM FOREST: IMPORTANCIA (Davor)
+% =====================================================================
+\begin{frame}
+\tpsec{Random Forest}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Random Forest · importancia de cada atributo}
+  \pbig{0.9}{1.6}{¿Qué atributos pesan \hl{más}?}
+  \card{0.9}{2.65}{9.6}{5.55}{}
+  \foreach \n/\a/\val/\lbl/\grp [count=\i from 0] in {Tipo de hoja/tipoHDR/0.292/{0,29}/h,Distancia hasta la ruta/distancia\_m/0.1255/{0,13}/p,Posición (latitud)/lat/0.0902/{0,09}/p,Posición (longitud)/lon/0.081/{0,08}/p,Velocidad/velocidad/0.0776/{0,08}/p,Kilómetros de ida/km\_ida/0.0452/{0,05}/h,Minutos de ida/min\_ida/0.0452/{0,05}/h,Hora/hora/0.0449/{0,04}/p}{%
+    \pgfmathsetmacro{\y}{2.95+\i*0.6}
+    \pgfmathsetmacro{\w}{\val/0.292*3.0}
+    \node[anchor=east,font=\tpSmall] at (4.7,\y+0.2) {\n};
+    \node[anchor=west,font=\ttfamily\tpTiny,text=tpdim] at (4.8,\y+0.2) {\a};
+    \ifx\grp\tmph
+      \barra{6.7}{\y}{\w}{0.4}{tpnavy}
+    \else
+      \barra{6.7}{\y}{\w}{0.4}{tpblue}
+    \fi
+    \node[anchor=west,font=\ttfamily\tpTiny,text=tpmuted] at (6.7+\w+0.1,\y+0.2) {\lbl};}
+  \node[anchor=north west] at (1.2,7.8) {\tikz\fill[tpblue,rounded corners=1pt] (0,0) rectangle (0.25,0.18);\ {\tpTiny Primer ping}\hspace{10pt}\tikz\fill[tpnavy,rounded corners=1pt] (0,0) rectangle (0.25,0.18);\ {\tpTiny Hoja de ruta}};
+  \card{10.8}{2.65}{4.3}{2.2}{\lab{Casi todo}\par\vspace{2pt}{\bfseries\tpBody Del primer ping y de la hoja de ruta}\par\vspace{2pt}{\tpTiny\color{tpmuted}El rastreo previo casi no aparece.}}
+  \card{10.8}{5.05}{4.3}{3.15}{\lab{Cómo lo configuramos}\par\vspace{4pt}
+    {\ttfamily\tpTiny n\_estimators = 200\\min\_samples\_leaf = 10\\n\_jobs = $-$1\\random\_state = 0}\par\vspace{4pt}{\tpTiny\color{tpmuted}Aprende \texttt{log(1 + y)}.}}
+\end{lamina}
+\note{\g{bosque}{importancia}}
+\end{frame}
+
+% =====================================================================
+% 20 · RANDOM FOREST: RESULTADO (Davor)
+% =====================================================================
+\begin{frame}
+\tpsec{Random Forest}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Error medio (MAE) · en minutos}
+  \pbig{0.9}{1.6}{Resultado: \hl{27,0 minutos}}
+  \card{0.9}{2.65}{6.7}{3.3}{}
+  \node[txt,text=tpmuted] at (1.2,3.0) {\tpSmall Mediana};
+  \barra{3.9}{2.95}{3.3}{0.4}{tpborderhi}
+  \node[anchor=east,text=tpmuted,font=\bfseries\tpSmall] at (7.1,3.15) {32,1};
+  \node[txt,text=tpblue] at (1.2,3.7) {\bfseries\tpSmall Random Forest};
+  \barra{3.9}{3.65}{2.78}{0.4}{tpblue}
+  \node[anchor=east,text=white,font=\bfseries\tpSmall] at (6.6,3.85) {27,0};
+  \node[txt,text=tpmuted] at (1.2,4.45) {\tpTiny Error mediano: 15,0 min (mediana) $\rightarrow$ 13,0 min (RF)};
+  \node[anchor=north west] at (1.2,5.05) {\chipsolid[tpok]{16 \% mejor que la mediana}};
+  \cardhi{7.9}{2.65}{7.2}{3.3}{\lab{Random Forest}\par\vspace{2pt}{\bfseries\tpHero\hl{27,0}\ {\tpBody min}}\par\vspace{2pt}{\tpSmall\color{tpmuted}de error medio por evento}}
+  \cardc{tpok}{0.9}{6.25}{6.7}{2.0}{{\bfseries\tpBody\color{tpok}Ventaja}\par\vspace{1pt}{\bfseries\tpBody El mejor de los dos modelos}\par\vspace{3pt}
+    {\tpTiny\color{tpmuted}Más estable que un solo árbol y casi no hace falta ajustar parámetros.}}
+  \cardc{tpwarn}{7.9}{6.25}{7.2}{2.0}{{\bfseries\tpBody\color{tpwarn}Límite}\par\vspace{1pt}{\bfseries\tpBody Más difícil de explicar}\par\vspace{3pt}
+    {\tpTiny\color{tpmuted}Son 200 árboles, no uno. Y no ajustamos hiperparámetros: son una elección inicial.}}
+\end{lamina}
+\note{\g{bosque}{resultado}}
+\end{frame}
+
+% =====================================================================
+% 21 · RESULTADOS LADO A LADO
+% =====================================================================
+\begin{frame}
+\tpsec{Resultados}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Validación cruzada por vehículo · 5 particiones}
+  \pbig{0.9}{1.6}{Lado a lado: \hl{el error de cada modelo}}
+  \card{0.9}{2.65}{8.6}{5.55}{}
+  \foreach \n/\val/\lbl/\c/\y in {Mediana/32.1/{32,1}/tpborderhi/3.5,Árbol de decisión/28.8/{28,8}/tpskyhi/4.9,Random Forest/27.0/{27,0}/tpblue/6.3}{%
+    \pgfmathsetmacro{\w}{\val/32.1*5.2}
+    \node[txt,font=\bfseries\tpSmall] at (1.2,\y-0.5) {\n};
+    \barra{1.2}{\y}{\w}{0.55}{\c}
+    \node[anchor=west,font=\ttfamily\small\bfseries,text=tpink] at (1.2+\w+0.15,\y+0.275) {\lbl};}
+  \node[anchor=north west,text=tpmuted,font=\ttfamily\tpTiny] at (1.2,7.5) {MAE EN MINUTOS · CUANTO MÁS BAJO, MEJOR};
+  \card{9.8}{2.65}{5.3}{1.6}{\lab{Mediana (baseline)}\par\vspace{2pt}{\bfseries\tpHthree 32,1}\ {\tpSmall min · error mediano 15,0}}
+  \card{9.8}{4.4}{5.3}{1.6}{\lab{Árbol de decisión}\par\vspace{2pt}{\bfseries\tpHthree 28,8}\ {\tpSmall min · error mediano 14,4}\par\vspace{3pt}\chip[tpok]{10 \% mejor}}
+  \cardhi{9.8}{6.15}{5.3}{2.05}{\lab{Random Forest}\par\vspace{2pt}{\bfseries\tpHthree\hl{27,0}}\ {\tpSmall min · error mediano 13,0}\par\vspace{3pt}\chipsolid[tpok]{16 \% mejor}\ \ {\tpTiny\color{tpmuted}El mejor de los dos}}
+\end{lamina}
+\note{\g{resultados}{tabla}}
+\end{frame}
+
+% =====================================================================
+% 22 · SUMANDO GRUPOS DE ATRIBUTOS
+% =====================================================================
+\begin{frame}
+\tpsec{Resultados}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Random Forest · MAE en minutos}
+  \pbig{0.9}{1.6}{Sumando grupos de \hl{atributos}}
+  \card{0.9}{2.65}{8.6}{5.55}{}
+  % alto de barra = MAE / 32,1 * 3,3 ; base en y = 7,3
+  \draw[tpdim,dashed,line width=0.7pt] (1.3,4.0) -- (9.1,4.0);
+  \node[anchor=south east,text=tpmuted,font=\ttfamily\tpTiny] at (9.1,4.0) {MEDIANA · 32,1};
+  \foreach \n/\val/\lbl/\p/\x/\c/\tc in {Primer ping/29.4/{29,4}/8 \%/1.6/tpskyhi/tpink,+ Hoja de ruta/27.0/{27,0}/16 \%/4.5/tpblue/white,+ Rastreo previo/27.0/{27,0}/16 \%/7.4/tpblue/white}{%
+    \pgfmathsetmacro{\h}{\val/32.1*3.3}
+    \barra{\x}{7.3-\h}{1.7}{\h}{\c}
+    \node[anchor=north,font=\bfseries\tpHthree,text=\tc] at (\x+0.85,7.3-\h+0.15) {\lbl};
+    \node[anchor=north,font=\ttfamily\tpTiny,text=\tc] at (\x+0.85,7.3-\h+0.6) {\p\ mejor};
+    \node[anchor=north,font=\tpSmall] at (\x+0.85,7.4) {\n};}
+  \card{9.8}{2.65}{5.3}{5.55}{\lab{¿Por qué el rastreo previo no ayuda?}}
+  \draw[tpskyhi,line width=15pt] (12.45,4.9) circle (1.2);
+  \draw[tpwarn,line width=15pt] (12.45,3.7) arc (-90:{-90+0.424*360}:1.2);
+  \node[font=\bfseries\tpHone,text=tpink] at (12.45,4.8) {42 \%};
+  \node[font=\tpTiny,text=tpmuted] at (12.45,5.25) {de los eventos};
+  \tx{10.1}{6.5}{4.7}{\tpSmall\textcolor{tpwarn}{$\blacksquare$}\ \textbf{Sin GPS previo:} antes de \T\ no hay ninguna lectura del vehículo.}
+\end{lamina}
+\note{\g{resultados}{grupos} \g{resultados}{porque}}
+\end{frame}
+
+% =====================================================================
+% 23 · CONCLUSIÓN
+% =====================================================================
+\begin{frame}
+\tpsec{Resultados}{}
+\begin{lamina}
+  \node[align=center,text=tpblue] at (8,1.9) {\lab{Conclusión}};
+  \node[align=center,text=tpink,text width=14cm] at (8,3.0) {\bfseries\tpHone Le ganan a la mediana,\\[2pt]\hl{pero por poco}};
+  \cardc{tpok}{0.9}{4.4}{6.9}{3.6}{{\bfseries\tpHthree\color{tpok}Hay señal}\par\vspace{4pt}\tpSmall Los dos modelos bajan el error medio frente a la mediana.}
+  \node[txt,text=tpmuted] at (1.2,6.15) {\tpTiny Mediana};
+  \barra{3.4}{6.15}{3.6}{0.25}{tpborderhi} \node[anchor=east,font=\ttfamily\tpTiny,text=tpmuted] at (7.5,6.275) {32,1};
+  \node[txt,text=tpmuted] at (1.2,6.6) {\tpTiny Árbol};
+  \barra{3.4}{6.6}{3.23}{0.25}{tpskyhi} \node[anchor=east,font=\ttfamily\tpTiny,text=tpmuted] at (7.5,6.725) {28,8};
+  \node[txt,text=tpmuted] at (1.2,7.05) {\tpTiny Random Forest};
+  \barra{3.4}{7.05}{3.03}{0.25}{tpblue} \node[anchor=east,font=\ttfamily\tpTiny,text=tpmuted] at (7.5,7.175) {27,0};
+  \cardc{tpwarn}{8.2}{4.4}{6.9}{3.6}{{\bfseries\tpHthree\color{tpwarn}Falta mejorar}\par\vspace{4pt}\tpSmall El error sigue siendo grande y al rastreo previo le falta información.}
+  \path[fill=tpwarn!12,rounded corners=5pt] (8.5,6.1) rectangle (11.55,7.7);
+  \node[font=\bfseries\tpHthree,text=tpwarn] at (10.025,6.6) {27,0 min};
+  \node[font=\tpTiny,text=tpmuted,align=center,text width=2.7cm] at (10.025,7.2) {error medio del mejor modelo};
+  \path[fill=tpwarn!12,rounded corners=5pt] (11.75,6.1) rectangle (14.8,7.7);
+  \node[font=\bfseries\tpHthree,text=tpwarn] at (13.275,6.6) {42 \%};
+  \node[font=\tpTiny,text=tpmuted,align=center,text width=2.7cm] at (13.275,7.2) {de los eventos sin GPS previo};
+\end{lamina}
+\note{\g{resultados}{conclusion}}
+\end{frame}
+
+% =====================================================================
+% 24 · LO QUE SIGUE
+% =====================================================================
+\begin{frame}
+\tpsec{Lo que sigue}{}
+\begin{lamina}
+  \eyebrow{0.9}{1.3}{Pendientes}
+  \pbig{0.9}{1.6}{Lo que \hl{llevamos para seguir}}
+  \foreach \i/\t/\d in {0/Ajustar hiperparámetros/{Profundidad, hoja mínima y cantidad de árboles hoy son una elección inicial.},
+                        1/Eventos del tope como censurados/{Tratar los de 4 h como datos censurados (Hojati et al., 2013).},
+                        2/Cortos y largos por separado/{Un clasificador previo y un modelo por grupo, como propone Grigorev et al. (2022).},
+                        3/Hojas vencidas/{Confirmar con Tecfield si los desvíos contra hojas vencidas son válidos.}}{%
+    \pgfmathsetmacro{\x}{0.9+mod(\i,2)*7.2}
+    \pgfmathsetmacro{\y}{2.65+int(\i/2)*2.05}
+    \card{\x}{\y}{7.0}{1.85}{{\color{tpblue}\bfseries\tpHthree\the\numexpr\i+1\relax}\ \ {\bfseries\tpBody\t}\par\vspace{3pt}{\tpSmall\color{tpmuted}\d}}}
+  \path[fill=tpnavy,rounded corners=8pt] (0.9,7.05) rectangle (15.1,8.2);
+  \node[align=center,text=white,text width=13cm,font=\bfseries\tpHthree] at (8,7.625) {Predecir, en el primer ping, cuánto va a durar un desvío.};
+\end{lamina}
+\note{\g{jueves}{reparto} \g{jueves}{pendientes} \g{jueves}{cierre}}
+\end{frame}
+
+\end{document}

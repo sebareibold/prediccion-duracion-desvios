@@ -1,0 +1,163 @@
+% =====================================================================
+% tema-tp.sty  ·  Tema de la presentación del TP1 (Lab. de IA, Grupo 5)
+% Mismo diseño que el video: fondo celeste muy claro, tarjetas blancas,
+% azul como único color de identidad; verde / rojo / ámbar solo con
+% significado (bien / mal o fuga / atención).
+%
+% Todo se dibuja en cm con el origen ARRIBA A LA IZQUIERDA de la lámina
+% (la y crece hacia ABAJO). La lámina mide 16 x 9 cm.
+%   zona útil:  x de 0.9 a 15.1  ·  y de 1.45 a 8.4
+% =====================================================================
+\ProvidesPackage{tema-tp}
+
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[T1]{fontenc}
+\RequirePackage[spanish,es-noshorthands,es-nodecimaldot]{babel}
+\RequirePackage[sfdefault,proportional]{inter}
+\RequirePackage[scale=0.9]{sourcecodepro}   % monoespaciada (parecida a JetBrains Mono)
+\RequirePackage[expansion=false]{microtype}
+\RequirePackage{tikz}
+\usetikzlibrary{arrows.meta,calc,positioning,shapes.geometric,fit,backgrounds,decorations.pathreplacing,patterns}
+\RequirePackage{xcolor}
+\RequirePackage[normalem]{ulem}
+
+% ------------------------------------------------------------- Colores
+\definecolor{tpbg}{HTML}{F5F7FB}
+\definecolor{tpcard}{HTML}{FFFFFF}
+\definecolor{tpborder}{HTML}{DCE3EE}
+\definecolor{tpborderhi}{HTML}{C4D0E3}
+\definecolor{tpink}{HTML}{0B1736}
+\definecolor{tptext}{HTML}{1D2A47}
+\definecolor{tpmuted}{HTML}{5B6984}
+\definecolor{tpdim}{HTML}{93A0B8}
+\definecolor{tpblue}{HTML}{1D5BFF}
+\definecolor{tpbluedeep}{HTML}{0E3BB8}
+\definecolor{tpnavy}{HTML}{0A1B4D}
+\definecolor{tpsky}{HTML}{E8EFFF}
+\definecolor{tpskyhi}{HTML}{D3E0FF}
+\definecolor{tpok}{HTML}{14995B}
+\definecolor{tpbad}{HTML}{D93A3A}
+\definecolor{tpwarn}{HTML}{C77A0A}
+\definecolor{tpokbg}{HTML}{ECF8F2}
+\definecolor{tpbadbg}{HTML}{FDEEEE}
+\definecolor{tpwarnbg}{HTML}{FBF3E4}
+
+% ------------------------------------------------------ Beamer: base
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}{}
+\setbeamercolor{normal text}{fg=tptext}
+\usefonttheme{professionalfonts}
+\setbeamercolor{background canvas}{bg=tpbg}
+\setbeamersize{text margin left=0pt,text margin right=0pt}
+\setlength{\parindent}{0pt}
+
+% ------------------------------------------------ Escala tipográfica
+\newcommand{\tp@sp}{\spaceskip=0.23em plus 0.06em minus 0.05em\relax}
+\newcommand{\tp@spl}{\spaceskip=0.16em plus 0.03em minus 0.03em\relax}
+\newcommand{\tpHero}{\fontsize{28}{31}\selectfont\tp@spl}
+\newcommand{\tpHone}{\fontsize{19}{22}\selectfont\tp@spl}
+\newcommand{\tpHtwo}{\fontsize{15}{18}\selectfont\tp@sp}
+\newcommand{\tpHthree}{\fontsize{10.8}{13}\selectfont\tp@sp}
+\newcommand{\tpBody}{\fontsize{8.6}{10.8}\selectfont\tp@sp}
+\newcommand{\tpSmall}{\fontsize{6.7}{8.5}\selectfont\tp@sp}
+\newcommand{\tpTiny}{\fontsize{6.1}{7.6}\selectfont\tp@sp}
+\newcommand{\tpLab}{\fontsize{6.1}{7.5}\selectfont}
+
+% Sin cortes de palabra con guion (los textos van en columnas angostas)
+\hyphenpenalty=10000 \exhyphenpenalty=10000
+\AtBeginDocument{\hyphenpenalty=10000 \exhyphenpenalty=10000 }
+
+\newcommand{\hl}[1]{\textcolor{tpblue}{#1}}                 % palabra en azul
+\newcommand{\tmono}[1]{{\ttfamily\detokenize{#1}}}          % campo / código
+\newcommand{\T}{\textbf{T}\textsubscript{0}}                % T0
+\newcommand{\Tz}{\T}
+
+% Rótulo en mayúsculas, monoespaciado, con espaciado de letras
+\newcommand{\lab}[1]{{\ttfamily\tpLab\textls[90]{\MakeUppercase{#1}}}}
+
+% Chip (pastilla). \chip{texto}  \chip[color]{texto}
+\newcommand{\chip}[2][tpblue]{%
+  \tikz[baseline=(c.base)]\node[fill=#1!10,draw=#1!45,rounded corners=2.2pt,inner xsep=3.6pt,inner ysep=1.8pt,text=#1,font=\ttfamily\tpTiny] (c) {#2};}
+% Chip lleno
+\newcommand{\chipsolid}[2][tpblue]{%
+  \tikz[baseline=(c.base)]\node[fill=#1,rounded corners=2.2pt,inner xsep=4pt,inner ysep=2pt,text=white,font=\bfseries\tpTiny] (c) {#2};}
+
+% ------------------------------------------------- Estado de la lámina
+\newcommand{\tp@sec}{}
+\newcommand{\tp@pres}{}
+% \tpsec{Título de la sección}{Presentador (o vacío)}
+\newcommand{\tpsec}[2]{\gdef\tp@sec{#1}\gdef\tp@pres{#2}}
+
+% --------------------------------------------------- Fondo y cabecera
+\setbeamertemplate{background canvas}{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[tpbg] (current page.south west) rectangle (current page.north east);
+    \shade[top color=tpsky,bottom color=tpbg] (current page.north west) rectangle ($(current page.north east)+(0,-3.6)$);
+  \end{tikzpicture}}
+
+\setbeamertemplate{headline}{%
+  \begin{tikzpicture}[remember picture,overlay,shift={(current page.north west)},y=-1cm]
+    \fill[tpblue] (0.9,0.55) circle (0.07);
+    \node[anchor=west,text=tpmuted] at (1.1,0.55) {\ttfamily\tpLab\textls[60]{LAB. IA · TP1 · GRUPO 5}};
+    \node[anchor=east,text=tpdim] at (15.1,0.55) {\ttfamily\tpLab\textls[40]{\two@digits{\insertframenumber}/\two@digits{\inserttotalframenumber}}};
+    % barra de avance al pie
+    \fill[tpborder] (0,8.94) rectangle (16,9);
+    \fill[tpblue] (0,8.94) rectangle ({16*\insertframenumber/\inserttotalframenumber},9);
+  \end{tikzpicture}}
+
+% ------------------------------------------------------ Entorno lámina
+\tikzset{
+  tp/.style={remember picture,overlay,shift={(current page.north west)},y=-1cm,
+    font=\tpBody,text=tptext,line cap=round,line join=round},
+  cardsty/.style={fill=tpcard,draw=tpborder,rounded corners=7pt,line width=0.5pt},
+  txt/.style={anchor=north west,align=left,inner sep=0pt,text=tptext},
+  sm/.style={font=\tpSmall},
+  ti/.style={font=\tpTiny},
+  mut/.style={text=tpmuted},
+}
+\newenvironment{lamina}{\tikzpicture[tp]}{\endtikzpicture}
+
+% ---------------------------------------------------- Bloques básicos
+% \card[opciones tikz]{x}{y}{ancho}{alto}{contenido}
+% Tarjeta blanca con sombra corta; el contenido arranca con 0.3 cm de margen.
+\newcommand{\card}[6][]{%
+  \fill[tpink!5,rounded corners=7pt] (#2+0.02,#3+0.07) rectangle (#2+#4+0.02,#3+#5+0.07);
+  \path[cardsty,#1] (#2,#3) rectangle (#2+#4,#3+#5);
+  \node[txt,text width={\dimexpr#4cm-0.6cm\relax}] at (#2+0.3,#3+0.27) {#6};}
+
+% Tarjeta con color semántico: \cardc{color}{x}{y}{w}{h}{contenido}
+\newcommand{\cardc}[6]{%
+  \path[fill=#1!7,draw=#1!45,rounded corners=7pt,line width=0.6pt] (#2,#3) rectangle (#2+#4,#3+#5);
+  \node[txt,text width={\dimexpr#4cm-0.6cm\relax}] at (#2+0.3,#3+0.27) {#6};}
+
+% Tarjeta resaltada en azul (la que se está nombrando)
+\newcommand{\cardhi}[5]{%
+  \fill[tpblue!10,rounded corners=7pt] (#1+0.02,#2+0.07) rectangle (#1+#3+0.02,#2+#4+0.07);
+  \path[fill=tpsky!60!white,draw=tpblue!70,rounded corners=7pt,line width=0.8pt] (#1,#2) rectangle (#1+#3,#2+#4);
+  \node[txt,text width={\dimexpr#3cm-0.6cm\relax}] at (#1+0.3,#2+0.27) {#5};}
+
+% Eyebrow (rótulo azul en mono) y título
+\newcommand{\eyebrow}[3]{\node[txt,text=tpblue] at (#1,#2) {\lab{#3}};}
+\newcommand{\ptitle}[3]{\node[txt,text=tpink,text width=14.2cm] at (#1,#2) {\bfseries\tpHtwo #3};}
+\newcommand{\pbig}[3]{\node[txt,text=tpink,text width=14.2cm] at (#1,#2) {\bfseries\tpHone #3};}
+
+% Texto libre con ancho: \tx[opciones]{x}{y}{ancho}{texto}
+\newcommand{\tx}[5][]{\node[txt,text width=#4cm,#1] at (#2,#3) {#5};}
+
+% Número circular (paso 1, 2, 3 …)
+\newcommand{\num}[3]{\node[circle,fill=tpblue,text=white,inner sep=0pt,minimum size=0.62cm,font=\bfseries\tpSmall] at (#1,#2) {#3};}
+\newcommand{\numoff}[3]{\node[circle,fill=tpcard,draw=tpborderhi,text=tpdim,inner sep=0pt,minimum size=0.62cm,font=\bfseries\tpSmall] at (#1,#2) {#3};}
+
+% Código monoespaciado dentro de una caja
+\newcommand{\codebox}[5][]{%
+  \path[fill=tpcard,draw=tpborder,rounded corners=5pt,line width=0.5pt,#1] (#2,#3) rectangle (#2+#4,#3+#5);
+  \fill[tpbad!70] (#2+0.22,#3+0.2) circle (0.05);
+  \fill[tpwarn!70] (#2+0.4,#3+0.2) circle (0.05);
+  \fill[tpok!70] (#2+0.58,#3+0.2) circle (0.05);}
+
+% Flecha fina
+\tikzset{flecha/.style={-{Stealth[length=4pt,width=3.4pt]},line width=0.9pt,tpblue}}
+\tikzset{flechag/.style={-{Stealth[length=4pt,width=3.4pt]},line width=0.9pt,tpdim}}
+
+% Notas del orador (guion) — se ven con \setbeameroption{show notes on second screen=right}
+\setbeamertemplate{note page}[plain]
