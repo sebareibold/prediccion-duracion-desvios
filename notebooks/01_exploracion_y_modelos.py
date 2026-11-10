@@ -1098,12 +1098,12 @@ def _(mo):
                 """
     # Modelos
 
-    Se comparan contra la **mediana** (*baseline*): un árbol de decisión y un Random Forest. Los
-    dos aprenden log(1 + *y*), porque la duración tiene cola larga.
+    Se comparan contra la **mediana** (*baseline*): un árbol de decisión, un Random Forest y
+    **XGBoost**. Todos aprenden log(1 + *y*), porque la duración tiene cola larga.
 
     Validación cruzada de 5 particiones **por vehículo**: un mismo móvil nunca queda en
     entrenamiento y prueba a la vez. Métricas en minutos, sobre las predicciones fuera de muestra:
-    **MAE** (error absoluto medio) y **error mediano**.
+    **MAE** (error absoluto medio), **RMSE** (raíz del error cuadrático medio) y **error mediano**.
 
     Sacá atributos de la lista para ver si con menos ya alcanza.
     """
@@ -1130,11 +1130,12 @@ def _(CATEGORICOS, corpus, pl):
     from sklearn.ensemble import RandomForestRegressor
     from sklearn.model_selection import GroupKFold
     from sklearn.tree import DecisionTreeRegressor
+    from xgboost import XGBRegressor
 
     # Modelo de referencia: predice siempre la mediana de duración del entrenamiento.
     BASELINE = "Mediana (baseline)"
 
-    def _matriz(atributos):
+    def matriz(atributos):
         """Corpus como matriz numérica: categóricos a códigos 0..k-1 y booleanos a 0/1.
 
         atributos: lista de nombres de columnas del corpus. Devuelve un arreglo de NumPy con una
@@ -1152,7 +1153,7 @@ def _(CATEGORICOS, corpus, pl):
                 columnas.append(pl.col(atributo).cast(pl.Float64))
         return corpus.select(columnas).to_numpy()
 
-    def _modelos():
+    def crear_modelos():
         """Modelos nuevos (sin entrenar), con semilla fija para que los resultados se repitan.
 
         Devuelve un diccionario {nombre: modelo}.
@@ -1171,6 +1172,17 @@ def _(CATEGORICOS, corpus, pl):
                 n_jobs=-1,
                 random_state=0,
             ),
+            # Gradient boosting: árboles chicos en secuencia, cada uno corrige el error de los
+            # anteriores. Aceptan NaN, así que los faltantes se manejan igual que en los otros.
+            "XGBoost": XGBRegressor(
+                n_estimators=300,
+                learning_rate=0.05,
+                max_depth=4,
+                min_child_weight=10,
+                subsample=0.8,
+                n_jobs=-1,
+                random_state=0,
+            ),
         }
 
     def evaluar(atributos, solo=None):
@@ -1182,12 +1194,12 @@ def _(CATEGORICOS, corpus, pl):
         """
         # X: matriz de atributos. y: duración en segundos. vehiculos: vehículo de cada evento,
         # que define las particiones de la validación cruzada.
-        X = _matriz(atributos)
+        X = matriz(atributos)
         y = corpus["y"].to_numpy()
         vehiculos = corpus["flota"].to_numpy()
 
         if solo is None:
-            nombres = list(_modelos())
+            nombres = list(crear_modelos())
         else:
             nombres = [solo]
 
@@ -1204,7 +1216,7 @@ def _(CATEGORICOS, corpus, pl):
             predicciones[BASELINE][prueba] = np.median(y[entrenamiento])
 
             # Modelos nuevos en cada partición, para no arrastrar lo aprendido de la anterior.
-            modelos = _modelos()
+            modelos = crear_modelos()
             for nombre in nombres:
                 modelo = modelos[nombre]
                 # Se entrena sobre log(1 + y) y se vuelve a segundos al predecir.
@@ -1215,6 +1227,7 @@ def _(CATEGORICOS, corpus, pl):
         error_baseline = np.abs(predicciones[BASELINE] - y).mean()
 
         # Métricas por modelo, en minutos. La mejora es 1 - MAE del modelo / MAE de la mediana.
+        # El RMSE eleva los errores al cuadrado antes de promediar: penaliza más los errores grandes.
         filas = []
         for nombre, prediccion in predicciones.items():
             error = np.abs(prediccion - y)
@@ -1222,13 +1235,14 @@ def _(CATEGORICOS, corpus, pl):
                 {
                     "modelo": nombre,
                     "MAE (min)": error.mean() / 60,
+                    "RMSE (min)": np.sqrt((error**2).mean()) / 60,
                     "error mediano (min)": np.median(error) / 60,
                     "mejora MAE vs. mediana": 1 - error.mean() / error_baseline,
                 }
             )
         return pl.DataFrame(filas)
 
-    return (evaluar,)
+    return crear_modelos, evaluar, matriz, np
 
 
 @app.cell(hide_code=True)
@@ -1301,10 +1315,140 @@ def _(ATRIBUTOS, evaluar, pl):
     _tabla = pl.concat(_filas).select(
         "atributos",
         "MAE (min)",
+        "RMSE (min)",
         "error mediano (min)",
         "mejora MAE vs. mediana",
     )
     _tabla
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ## ¿Qué variables importan?
+    Se entrena cada modelo una vez con todo el corpus y se mide la **importancia** de cada
+    atributo: cuánto reduce el error de los árboles, sumando todas las preguntas que se hacen
+    sobre él (las importancias suman 1). Para el árbol de decisión se muestra además qué
+    atributos usa en las primeras preguntas.
+    """)
+    return
+
+
+@app.cell
+def _(ATRIBUTOS, COLOR, alt, corpus, crear_modelos, elegidos, matriz, mo, np, pl):
+    mo.stop(not elegidos.value, mo.md("Elegí al menos un atributo."))
+
+    _atributos = list(elegidos.value)
+    _grupo_de = {a: g for g, lista in ATRIBUTOS.items() for a in lista}
+    _X = matriz(_atributos)
+    _z = np.log1p(corpus["y"].to_numpy())
+
+    # Un modelo de cada tipo con todo el corpus: sirve para describirlos, no para evaluarlos.
+    _modelos = crear_modelos()
+    _filas = []
+    for _nombre, _modelo in _modelos.items():
+        _modelo.fit(_X, _z)
+        # Se normaliza para que las importancias de cada modelo sumen 1.
+        _importancia = _modelo.feature_importances_ / _modelo.feature_importances_.sum()
+        for _atributo, _valor in zip(_atributos, _importancia):
+            _filas.append(
+                {
+                    "modelo": _nombre,
+                    "atributo": _atributo,
+                    "grupo": _grupo_de[_atributo],
+                    "importancia": float(_valor),
+                }
+            )
+    importancias = pl.DataFrame(_filas)
+    arbol = _modelos["Árbol de decisión"]
+    bosque = _modelos["Random Forest"]
+
+    _grafico = (
+        alt.Chart(importancias)
+        .mark_bar(cornerRadiusEnd=4)
+        .encode(
+            y=alt.Y("atributo:N", sort="-x", title=None),
+            x=alt.X("importancia:Q"),
+            color=alt.Color("grupo:N", title="Grupo"),
+            row=alt.Row("modelo:N", title=None),
+            tooltip=["modelo", "atributo", "grupo", "importancia"],
+        )
+        .properties(width=500, height=360)
+    )
+
+    # Importancia total de cada grupo de atributos.
+    _por_grupo = (
+        importancias.group_by("modelo", "grupo")
+        .agg(pl.col("importancia").sum())
+        .sort("modelo", "importancia", descending=[False, True])
+    )
+
+    mo.vstack(
+        [
+            mo.md("### Importancia por atributo"),
+            _grafico,
+            mo.md("### Importancia por grupo de atributos"),
+            _por_grupo,
+            importancias.sort("modelo", "importancia", descending=[False, True]),
+        ]
+    )
+    return arbol, bosque, importancias
+
+
+@app.cell
+def _(arbol, corpus, elegidos, matriz, mo, np, pl):
+    mo.stop(not elegidos.value, mo.md("Elegí al menos un atributo."))
+
+    _atributos = list(elegidos.value)
+    _X = matriz(_atributos)
+    _y_min = corpus["y"].to_numpy() / 60
+    _t = arbol.tree_
+
+    # decision_path marca, para cada evento, los nodos por los que pasó: la mediana de cada nodo
+    # sale de los eventos que llegaron a él.
+    _camino = arbol.decision_path(_X).tocsc()
+
+    # Recorre el árbol por niveles y se queda con los nodos internos hasta la profundidad 3.
+    _filas = []
+    _nivel = [(0, "raíz")]
+    for _profundidad in range(3):
+        _siguiente = []
+        for _nodo, _rama in _nivel:
+            if _t.children_left[_nodo] == -1:
+                continue
+            _eventos = _camino[:, _nodo].nonzero()[0]
+            _filas.append(
+                {
+                    "nivel": _profundidad + 1,
+                    "rama": _rama,
+                    "atributo": _atributos[_t.feature[_nodo]],
+                    "umbral": float(_t.threshold[_nodo]),
+                    "eventos": int(_t.n_node_samples[_nodo]),
+                    "mediana (min)": float(np.median(_y_min[_eventos])),
+                    # Dónde van los faltantes: si el árbol aprendió una regla para ellos.
+                    "faltantes a la izquierda": bool(
+                        _t.missing_go_to_left[_nodo]
+                    ),
+                }
+            )
+            _siguiente.append((_t.children_left[_nodo], _rama + " → izq (≤ umbral)"))
+            _siguiente.append((_t.children_right[_nodo], _rama + " → der (> umbral)"))
+        _nivel = _siguiente
+
+    mo.vstack(
+        [
+            mo.md(
+                f"""
+    ### Primeras preguntas del árbol de decisión
+    Con todo el corpus el árbol llega a profundidad {arbol.get_depth()} y tiene
+    {arbol.get_n_leaves()} hojas. Los atributos categóricos entran como códigos, por eso su
+    umbral no es una medida sino un corte entre categorías.
+    """
+            ),
+            pl.DataFrame(_filas),
+        ]
+    )
     return
 
 

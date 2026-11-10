@@ -1,0 +1,52 @@
+==================== MENSAJE PARA MANU ====================
+
+Asunto: Proyecto Tecfield - Informes actualizados con las recomendaciones de la reunión (Grupo 5)
+
+Buenos días Manu, ¿cómo andás?
+
+Te escribo de parte de todos los del grupo (Bautista, Davor y yo). Te paso lo que hicimos después de la reunión. Incorporamos las recomendaciones que nos dieron:
+
+- Agregamos una métrica más, el RMSE, además del error absoluto medio (MAE) y el error mediano.
+- Hicimos el análisis de importancia de variables: qué atributos pesaron más al entrenar cada modelo y cuáles fueron los primeros que separan el árbol de decisión.
+- Probamos un modelo nuevo, XGBoost, y lo comparamos con el Random Forest, el árbol y la mediana.
+
+Algunos resultados:
+
+- La variable más importante en todos los modelos es el tipo de hoja. Es también la primera pregunta del árbol: los desvíos con tipo de hoja informado duran una mediana de 40 minutos y los que no lo tienen, 14.
+- Con XGBoost el error queda prácticamente igual al del Random Forest (MAE de 27,3 contra 27,0 minutos). No lo superó con la configuración inicial, sin ajustar.
+
+Te adjunto los tres informes en PDF y el notebook:
+1. Entendimiento del problema y trabajos relacionados
+2. Exploración de los datos y corpus
+3. Entrenamiento de los modelos y explicación de los resultados
+
+Cualquier cosa que veas, avisanos y lo corregimos.
+
+Gracias,
+Sebastián Reibold, Bautista Fernandez Gramajo y Davor Kissner
+
+
+==================== MENSAJE PARA EL PROFE GERMÁN Y SANDRA ====================
+
+Asunto: Laboratorio de IA - Entrega de informes y notebook (Grupo 5)
+
+Buenos días profe Germán y profe Sandra, ¿cómo se encuentran?
+
+Queríamos hacer la entrega de los informes que teníamos del trabajo de laboratorio. Luego de la reunión del jueves ordenamos un poco más los informes y ahora quedaron en tres documentos:
+
+1. Entendimiento del problema y trabajos relacionados
+2. Exploración de los datos y corpus
+3. Entrenamiento de los modelos y explicación de los resultados
+
+También llevamos a cabo las recomendaciones que nos dio el equipo de Tecfield:
+
+- Agregamos el RMSE como métrica adicional.
+- Hicimos el análisis de importancia de variables y vimos cuáles fueron las primeras que bifurcan el árbol de decisión.
+- Incorporamos un modelo nuevo de los que nos recomendó el equipo de Tecfield, XGBoost.
+
+Adjuntamos los tres PDF y el notebook (01_exploracion_y_modelos.py) con todo el código. Estos mismos documentos también se los vamos a enviar a los chicos de Tecfield.
+
+Quedamos atentos a sus comentarios.
+
+Saludos,
+Sebastián Reibold, Bautista Fernandez Gramajo y Davor Kissner

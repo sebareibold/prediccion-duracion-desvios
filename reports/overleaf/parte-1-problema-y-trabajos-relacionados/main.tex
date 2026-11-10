@@ -1,0 +1,370 @@
+\documentclass[12pt, a4paper]{article}
+
+% ── Paquetes ──────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+  \geometry{margin=2cm}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{hyperref}
+  \hypersetup{colorlinks=true, linkcolor=black, citecolor=blue, urlcolor=blue}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{parskip}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{pdflscape}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\usepackage{tikz}
+\usetikzlibrary{positioning, shapes.multipart, arrows.meta}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{gray},
+  stringstyle=\color{orange},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  breaklines=true,
+  frame=single,
+  captionpos=b
+}
+
+% ══════════════════════════════════════════════════════════
+\begin{document}
+
+% ── CARÁTULA ──────────────────────────────────────────────
+\begin{titlepage}
+  \centering
+
+  \includegraphics[width=0.2\linewidth]{img/logo-fai.png}
+  \hfill
+  \includegraphics[width=0.2\linewidth]{img/logo-unco.png}
+
+  \vspace{0.5cm}
+  {\large Departamento Teoría de la Computación}\\[0.2cm]
+  {\large \textbf{Facultad de Informática}}\\[0.2cm]
+  {\large Universidad Nacional del Comahue}\\[2cm]
+
+  {\Huge \bfseries Laboratorio de inteligencia artificial}\\[0.5cm]
+  {\Large Trabajo Práctico Obligatorio N\textsuperscript{o} 1}\\[0.3cm]
+  {\LARGE \bfseries Parte 1: entendimiento del problema y trabajos relacionados}\\[0.3cm]
+  {\large Predicción de la duración de desvíos de ruta en flotas de transporte de personal}\\[1cm]
+
+  \begin{tabular}{lll}
+    \toprule
+    \textbf{Apellido y Nombre} & \textbf{Legajo} & \textbf{Email} \\
+    \midrule
+    Reibold, Sebastian Alejandro & FAI-3854 & sebastian.reibold@est.fi.uncoma.edu.ar \\
+    Fernandez Gramajo, Bautista & FAI-3874 & bautista.fernandez@est.fi.uncoma.edu.ar \\
+    Kissner, Davor & FAI-3185 & davor.kissner@est.fi.uncoma.edu.ar \\
+    \bottomrule
+  \end{tabular}
+
+  \vfill
+  {\large\quad Cursado 2026 \quad --- \quad 7 de noviembre de 2026}
+\end{titlepage}
+
+% ── ÍNDICE ────────────────────────────────────────────────
+\tableofcontents
+\newpage
+
+% ══════════════════════════════════════════════════════════
+\section{Introducción}
+
+Este trabajo se enmarca en el convenio entre la empresa Tecfield SRL y la Facultad de Informática de
+la UNComa, en la materia Laboratorio de Inteligencia Artificial. Tecfield cuenta con un detector
+automático que compara la posición GPS de cada vehículo contra su hoja de ruta y registra un evento
+cuando la distancia supera los 500 metros. En el instante en que aparece el primer punto fuera de
+ruta, la sala de monitoreo no puede anticipar si el desvío durará minutos o más de una hora, lo que
+dificulta priorizar la atención entre un volumen alto de alertas.
+
+El proyecto busca estimar, en ese primer instante, la duración esperada del desvío. El trabajo
+completo se presenta en tres documentos. Este primero plantea el problema, los objetivos y los
+trabajos relacionados. El segundo describe los datos y la construcción del corpus. El tercero
+presenta los modelos, las métricas y los resultados.
+
+% ══════════════════════════════════════════════════════════
+\section{Motivación}
+
+Tecfield SRL opera flotas de vehículos dedicadas, principalmente, al transporte
+de personal hacia obras y yacimientos de la región. Cada vehículo tiene asignada
+una \emph{hoja de ruta} con un recorrido planificado, y un detector automático
+compara periódicamente su posición GPS contra la geometría de ese recorrido.
+Cuando la distancia supera un umbral (actualmente 500 metros), el detector
+registra un \emph{evento de desvío} y agrupa las lecturas consecutivas que
+permanecen fuera de ruta bajo un mismo identificador. El evento se cierra cuando
+el vehículo retoma la ruta o cuando se alcanza el tope de cuatro horas del
+detector, en cuyo caso no hay un retorno efectivamente medido.
+
+El problema surge en el instante en que aparece el primer punto fuera de ruta
+(que en adelante llamamos $T_0$). En ese momento la sala de monitoreo no tiene
+forma de distinguir una separación momentánea ---el vehículo toma una calle
+alternativa y retoma la ruta en uno o dos minutos--- de un evento prolongado que
+puede extenderse durante una hora o más. Como el detector está en producción
+desde 2026 y genera del orden de 100.000 lecturas por mes, el volumen de
+alertas es alto y todas se atienden con la misma prioridad. Esto satura la
+atención de los operadores y hace que los recursos de monitoreo no se destinen
+necesariamente a los casos que más lo requieren.
+
+Un agravante es que no existen etiquetas humanas confiables sobre el motivo de
+cada desvío (falla de GPS, hoja de ruta mal configurada, vehículo mal asignado,
+recorrido operativo distinto del plan), por lo que no es posible entrenar un
+clasificador de desvíos ``relevantes'' versus ``irrelevantes''. Lo que sí queda
+registrado de manera sistemática es \emph{cuánto duró} cada evento. Esto
+convierte a la duración en una variable objetivo disponible, objetiva y
+directamente útil para la operación.
+
+Contar con una estimación temprana de la duración esperada de un desvío,
+calculada en $T_0$ y sólo con información conocida hasta ese instante,
+permitiría priorizar la atención de las alertas más críticas desde el momento
+en que se generan, en lugar de esperar a que el evento se resuelva por sí mismo
+o alcance el tope del detector. En otros términos, se trata de construir un
+mecanismo de \emph{alerta temprana} (\emph{early warning}) sobre un evento que
+ya fue detectado, pero cuya gravedad todavía se desconoce. La importancia de la
+solución es que para Tecfield, reduce la carga de trabajo en monitoreo y mejora el tiempo de reacción ante desvíos largos.
+
+% ══════════════════════════════════════════════════════════
+\section{Objetivos}
+
+\subsection{Objetivo general}
+
+Desarrollar un prototipo que permita estimar, en el momento en que se detecta
+el primer punto fuera de ruta de un vehículo ($T_0$), la duración esperada del
+evento de desvío, de modo de apoyar la priorización de alertas en la sala de
+monitoreo de Tecfield.
+
+\subsection{Objetivos específicos}
+
+\begin{enumerate}
+  \item \textbf{Construir} un panel evento-a-evento a partir de las colecciones
+  provistas por Tecfield (\texttt{desviosHojaRuta}, \texttt{hojaDeRuta} y
+  \texttt{rastreoSatelital}), con la duración observada de cada evento como
+  variable objetivo.
+  \item \textbf{Analizar} el conjunto de datos construido para caracterizar la
+  distribución de duraciones, la calidad y cobertura de las variables
+  disponibles en $T_0$, y las limitaciones del corpus.
+  \item \textbf{Desarrollar} un modelo predictivo que estime la duración del
+  evento utilizando exclusivamente la información conocida hasta $T_0$.
+  \item \textbf{Evaluar} el desempeño del modelo frente a referencias simples
+  (\emph{baselines}) mediante una separación de los conjuntos de entrenamiento
+  y prueba por vehículo, analizando el error según distintos segmentos de
+  interés operativo.
+\end{enumerate}
+% ══════════════════════════════════════════════════════════
+\section{Trabajos relacionados}
+
+El problema se ubica en la intersección de tres líneas de
+investigación bien establecidas: la predicción de desvíos respecto de rutas
+planificadas, la detección de trayectorias anómalas a partir de GPS y la
+predicción de la duración de incidentes viales. A continuación se describen
+cuatro trabajos representativos y se analiza qué aporta cada uno al proyecto.
+
+\subsection{Predicción de desvíos en rutas de última milla
+  \cite{konovalenko2026}}
+
+Se estudia sobre datos reales de una empresa de
+logística noruega, si es posible predecir que un conductor se desviará de la
+ruta planificada por el sistema de optimización y cuantificar la magnitud de
+ese desvío. Disponen de la ruta planificada y de la ruta realmente ejecutada
+para 19.647 rutas, 400 conductores y más de 10.000 ubicaciones, y el dataset
+fue publicado. La hipótesis central es que los desvíos no son aleatorios sino
+manifestaciones del \emph{conocimiento tácito} del conductor.
+
+Se definen tres métricas de desvío entre ruta planificada y real (calidad de la
+secuencia de paradas, distancia de edición normalizada y variación relativa de
+la distancia total) y las usan para construir dos tareas: una regresión que
+estima el grado de desvío y una clasificación binaria (desviada / no desviada)
+según umbrales sobre las tres métricas. Las variables de entrada son
+propiedades estáticas (identificador del conductor, día de la semana, país,
+cantidad de paradas, experiencia reciente) y secuenciales (secuencia de
+paradas, tipo de parada, si es depósito). Proponen una arquitectura de red
+neuronal con \emph{embeddings} y un bloque secuencial intercambiable (LSTM,
+atención o CNN), y la comparan contra cuatro \emph{benchmarks}: promedio
+histórico global, promedio histórico por conductor y día, Random Forest y
+perceptrón multicapa. La evaluación usa una partición temporal
+(entrenamiento con rutas antiguas, prueba con las más recientes) estratificada
+por conductor y día, con MSE, RMSE y MAE para regresión. Reportan mejoras del
+9--19\,\% en regresión respecto de los \emph{benchmarks}.
+
+\textbf{Relación con el proyecto.} Es el trabajo más cercano en cuanto a
+contexto: ruta planificada versus ruta real, datos operativos de una empresa
+y predicción de desvíos. Son directamente reutilizables (i) la metodología de
+evaluación contra \emph{benchmarks} simples basados en
+promedios históricos, (ii) el protocolo de agregar variables de manera
+incremental y conservar sólo las que mejoran, y (iii) el conjunto de métricas
+de regresión. La diferencia principal es el momento y la unidad de predicción:
+ellos predicen \emph{antes} de que comience el viaje, a nivel de ruta completa,
+si habrá desvío y cuánto se alterará la secuencia de paradas; nosotros
+predecimos \emph{durante} el viaje, a nivel de evento ya detectado, cuánto
+tiempo durará. Además, la variable objetivo de ellos es una similitud
+acotada en $[0,1]$, mientras que la nuestra es una duración en segundos con
+distribución muy asimétrica. La arquitectura secuencial con LSTM no aplica
+directamente porque en $T_0$ no hay secuencia de paradas, aunque podría
+considerarse si se incorpora la telemetría previa como serie temporal. También
+difiere el criterio de partición: ellos separan por fecha y estratifican por
+conductor, de modo que cada conductor aparece en los tres subconjuntos,
+mientras que en nuestro caso se separa por vehículo justamente para impedir que
+el modelo memorice el comportamiento de un móvil visto en entrenamiento.
+
+\subsection{Predicción de la duración de incidentes viales
+  \cite{grigorev2022}}
+
+Se aborda la predicción de cuánto durará un
+incidente de tránsito (accidente, avería, obstrucción) a partir de la
+información disponible en el reporte inicial, sobre tres conjuntos de datos
+de arterias y autopistas de Sídney y San Francisco. Proponen un marco
+\emph{bi-nivel}: primero un clasificador decide si el incidente será corto o
+largo, buscando el umbral que equilibra las clases y el desempeño; luego un
+modelo de regresión específico para cada grupo estima la duración en minutos.
+Incorporan un procedimiento de remoción de valores atípicos y una técnica de
+optimización conjunta (IEO-ML) que extiende varios modelos base de aprendizaje
+automático. Una conclusión relevante es que los incidentes cortos y largos
+deben modelarse por separado, y que el enfoque propuesto supera a los modelos
+base en la mayoría de los escenarios analizados.
+
+\textbf{Relación con el proyecto.} Este trabajo resuelve un problema
+estructuralmente idéntico al nuestro aunque en otro dominio: predecir la
+duración de un evento en el momento en que se lo detecta, con información
+parcial, sobre datos operativos con fuerte asimetría y valores extremos. Son
+aplicables (i) la idea de tratar por separado los eventos cortos y largos,
+posiblemente como una etapa de clasificación previa a la regresión, (ii) el
+tratamiento explícito de \emph{outliers} en la variable objetivo, que se
+corresponde con nuestra tarea de definir umbrales para eventos anómalamente
+cortos o largos, y (iii) el uso de modelos basados en árboles y ensambles como
+línea principal. La diferencia está en las variables de entrada: los reportes
+de incidentes incluyen tipo de incidente, cantidad de carriles afectados,
+condiciones climáticas y flujo de tráfico, mientras que nosotros contamos
+principalmente con variables geoespaciales y de telemetría del propio
+vehículo.
+
+\subsection{Detección online de trayectorias anómalas
+  \cite{chen2013}}
+
+iBOAT es un método para detectar en tiempo real si
+la trayectoria GPS de un taxi se aparta de las rutas ``normales'' históricas
+entre un origen y un destino, e identificar qué tramo es responsable de la
+anomalía. La ciudad se discretiza en una grilla, cada trayectoria se
+representa como secuencia de celdas y, a medida que llegan nuevos puntos, se
+calcula el soporte que tiene el tramo reciente en las trayectorias históricas:
+un soporte bajo indica anomalía. Lo evalúan sobre las trayectorias de 7.600
+taxis durante un mes, con desempeño cercano al máximo (AUC $\ge 0{,}99$), y
+analizan unas 43.800 trayectorias anómalas, encontrando que la mayoría
+corresponde a fraudes deliberados de los conductores.
+
+\textbf{Relación con el proyecto.} iBOAT resuelve la etapa \emph{anterior} a
+la nuestra: decidir si un vehículo está fuera de ruta. Tecfield ya tiene
+resuelto ese paso con un detector propio basado en distancia a la geometría de
+la hoja de ruta, por lo que no necesitamos reimplementarlo. El trabajo es útil
+por dos motivos. Primero, muestra cómo representar y comparar trayectorias GPS
+contra un patrón de referencia, lo que sugiere variables para $T_0$ (por
+ejemplo, cuán ``frecuente'' es la zona donde se produce el desvío en el
+historial del vehículo o de la obra). Segundo, ilustra que las anomalías
+detectadas mezclan causas muy distintas (fraude, cortes de calle, rutas
+alternativas legítimas), lo que refuerza la limitación de nuestro corpus:
+los eventos de desvío incluyen tanto desvíos reales como falsos desvíos por
+fallas de GPS o hojas mal configuradas, sin etiqueta que los distinga. La
+diferencia central es que iBOAT es un problema no supervisado de detección,
+mientras que el nuestro es supervisado de regresión.
+
+\subsection{Modelos de duración basados en riesgo
+  \cite{hojati2013}}
+
+Se modela la duración de incidentes en
+autopistas mediante modelos de supervivencia (\emph{hazard-based}), en los que
+la variable de interés es el tiempo hasta que el evento finaliza y la función
+de riesgo describe la probabilidad de que termine en el instante siguiente,
+dado que aún no terminó. Ajustan distribuciones paramétricas (Weibull,
+log-logística, log-normal) por tipo de incidente y estudian qué factores
+aceleran o retrasan la finalización.
+
+\textbf{Relación con el proyecto.} Este enfoque es relevante por una
+característica particular de nuestros datos: los eventos que alcanzan el tope
+de cuatro horas del detector no tienen un final observado, es decir, son
+observaciones \emph{censuradas por la derecha}. Los modelos de supervivencia
+están diseñados exactamente para incorporar ese tipo de casos en lugar de
+descartarlos, lo que podría aprovechar información que un modelo de regresión
+convencional pierde. En la primera etapa del proyecto se seguirá la regla
+indicada en la consigna, que separa esos eventos por no corresponder a un
+retorno medido; este trabajo queda como
+referencia para una eventual extensión en la que se los trate como datos
+censurados. También aporta la idea de que la distribución de duraciones suele
+ser log-normal o Weibull, lo que justifica evaluar una transformación
+logarítmica de la variable objetivo.
+
+\subsection{Comparación}
+
+La Tabla~\ref{tab:comparacion} resume los trabajos analizados frente a la
+propuesta de este proyecto.
+
+\begin{landscape}
+\begin{table}[p]
+  \centering
+  \footnotesize
+  \renewcommand{\arraystretch}{1.25}
+  \begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{2.3cm} Y Y Y Y Y}
+    \toprule
+    & \textbf{Konovalenko 2026} & \textbf{Grigorev 2022} & \textbf{Chen 2013} & \textbf{Hojati 2013} & \textbf{Este proyecto} \\
+    \midrule
+    \textbf{Problema} & Predecir si una ruta será desviada y cuánto & Predecir duración de incidentes viales & Detectar en línea trayectorias anómalas & Modelar duración de incidentes & Predecir duración de un desvío ya detectado \\
+    \textbf{Tipo de tarea} & Regresión + clasificación & Clasificación (corto/largo) + regresión & Detección no supervisada & Análisis de supervivencia & Regresión \\
+    \textbf{Momento de predicción} & Antes de iniciar la ruta & Al reportarse el incidente & En cada nuevo punto GPS & Al reportarse el incidente & En el primer ping fuera de ruta ($T_0$) \\
+    \textbf{Unidad} & Ruta completa & Incidente & Trayectoria origen--destino & Incidente & Evento (\texttt{grupoDesvioId}) \\
+    \textbf{Datos} & 19.647 rutas planificadas y reales, 400 conductores & Reportes de incidentes de 3 redes viales (AU, EE.UU.) & GPS de 7.600 taxis, un mes & Reportes de incidentes en autopistas & Lecturas del detector (jul--ago 2026), hojas de ruta, GPS \\
+    \textbf{Variables} & Conductor, día, país, largo, experiencia, secuencia de paradas & Tipo de incidente, carriles, clima, tráfico & Secuencia de celdas de grilla & Tipo de incidente, ubicación, hora & Distancia a ruta, velocidad, posición, hora, tipo de vehículo y hoja, telemetría previa \\
+    \textbf{Modelos} & Redes con embeddings + LSTM/atención/CNN; RF y MLP como benchmark & Ensambles de árboles y otros modelos base; marco bi-nivel & Soporte de subtrayectorias sobre histórico & Weibull, log-logística, log-normal & Árbol de decisión y Random Forest \\
+    \textbf{Evaluación} & Partición temporal estratificada; MSE, RMSE, MAE & Múltiples escenarios de validación; error en minutos & AUC contra trayectorias etiquetadas & Bondad de ajuste, análisis de factores & Partición por vehículo; MAE, RMSE, error mediano \\
+    \textbf{Qué se toma} & Benchmarks históricos, selección incremental de variables, métricas de regresión & Separar cortos y largos; manejo de outliers; ensambles & Representación de trayectorias; conciencia de causas mixtas & Tratamiento de censura (tope de 4\,h); transformación log & --- \\
+    \textbf{Qué no aplica} & Predicción previa al viaje; secuencia de paradas; su partición es temporal y la nuestra por vehículo & Variables de reporte no disponibles & Etapa de detección ya resuelta & Foco explicativo, no predictivo & --- \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Comparación entre los trabajos relacionados y la propuesta del proyecto.}
+  \label{tab:comparacion}
+\end{table}
+\end{landscape}
+
+En síntesis, ninguno de los trabajos resuelve el mismo problema, pero en
+conjunto cubren los tres componentes que necesitamos: \cite{konovalenko2026}
+provee la metodología experimental para desvíos de ruta con datos de empresa,
+\cite{grigorev2022} y \cite{hojati2013} muestran cómo se aborda la predicción
+de duración de eventos con distribuciones asimétricas y datos censurados, y
+\cite{chen2013} enmarca el problema desde la detección sobre GPS y advierte
+sobre la heterogeneidad de causas detrás de un desvío.
+
+% ══════════════════════════════════════════════════════════
+\begin{thebibliography}{9}
+
+\bibitem{konovalenko2026}
+A.~Konovalenko, L.~M. Hvattum y K.~A.~H. Iversen.
+\newblock Predicting last-mile delivery route deviations using machine learning.
+\newblock \emph{Expert Systems With Applications}, 298:129921, 2026.
+\newblock \url{https://doi.org/10.1016/j.eswa.2025.129921}
+
+\bibitem{grigorev2022}
+A.~Grigorev, A.-S. Mihaita, S.~Lee y F.~Chen.
+\newblock Incident duration prediction using a bi-level machine learning
+  framework with outlier removal and intra--extra joint optimisation.
+\newblock \emph{Transportation Research Part C: Emerging Technologies},
+  141:103721, 2022.
+\newblock \url{https://doi.org/10.1016/j.trc.2022.103721}
+
+\bibitem{chen2013}
+C.~Chen, D.~Zhang, P.~S. Castro, N.~Li, L.~Sun, S.~Li y Z.~Wang.
+\newblock iBOAT: Isolation-based online anomalous trajectory detection.
+\newblock \emph{IEEE Transactions on Intelligent Transportation Systems},
+  14(2):806--818, 2013.
+
+\bibitem{hojati2013}
+A.~T. Hojati, L.~Ferreira, S.~Washington y P.~Charles.
+\newblock Hazard based models for freeway traffic incident duration.
+\newblock \emph{Accident Analysis \& Prevention}, 52:171--181, 2013.
+
+\end{thebibliography}
+\end{document}
