@@ -9,8 +9,8 @@
 \expandafter\def\csname guion@problema@flota\endcsname{Tecfield opera flotas que llevan personal a obras y yacimientos. Cada vehículo tiene una hoja de ruta, con el recorrido planificado.}
 \expandafter\def\csname guion@problema@detector\endcsname{Un detector compara la posición GPS contra ese recorrido. Cuando el vehículo se aleja más de 500 m, empieza a registrar lecturas de desvío. Hoy todas las alertas se atienden con la misma prioridad.}
 \expandafter\def\csname guion@problema@t0\endcsname{Al primer punto fuera de ruta lo llamamos T\textsubscript{0}. Y en T\textsubscript{0} nadie sabe si el vehículo tomó una calle alternativa y vuelve en un minuto, o si va a quedar afuera una hora.}
-\expandafter\def\csname guion@problema@etiquetas\endcsname{No hay etiquetas que digan por qué pasó cada desvío. Pero sí queda registrado cuánto duró: la última lectura menos la primera de cada evento, en segundos.}
-\expandafter\def\csname guion@problema@objetivo\endcsname{Entonces el objetivo es una regresión: en T\textsubscript{0}, y solo con lo que se sabe hasta ese momento, predecir cuántos segundos va a durar el desvío. Una alerta temprana.}
+\expandafter\def\csname guion@problema@objetivo\endcsname{El objetivo es una regresión: en T\textsubscript{0}, con lo que se sabe hasta ese momento, predecir cuántos segundos va a durar el desvío. Como entrada usamos el primer ping, la hoja de ruta y el GPS de los 10 minutos anteriores.}
+\expandafter\def\csname guion@problema@medida\endcsname{La duración que aprendemos es la última lectura menos la primera de cada evento de desvío.}
 
 \expandafter\def\csname guion@datos@tres\endcsname{Tecfield nos pasó tres colecciones exportadas de MongoDB: casi 2 GB de JSON.}
 \expandafter\def\csname guion@datos@desvios\endcsname{Desvíos hoja de ruta: las lecturas del detector. De acá salen los eventos y la duración.}

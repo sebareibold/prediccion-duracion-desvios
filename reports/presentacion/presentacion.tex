@@ -97,12 +97,13 @@
 \begin{lamina}
   \eyebrow{0.9}{1.3}{Mapa de la presentación}
   \pbig{0.9}{1.6}{Qué vamos a \hl{recorrer}}
-  \draw[tpborderhi,line width=1.2pt] (2.2,3.9) -- (13.8,3.9);
-  \foreach \i/\t/\d in {1/El problema/{Qué se quiere predecir y por qué},2/Los datos/{Tres colecciones de Tecfield},3/El corpus/{Una fila por desvío, sin fugas},4/Los modelos/{Árbol, Random Forest y XGBoost},5/Resultados/{MAE, RMSE e importancia de variables}}{%
-    \pgfmathsetmacro{\x}{2.2+(\i-1)*2.9}
-    \num{\x}{3.9}{\i}
-    \node[font=\bfseries\tpBody,text=tpink] at (\x,4.6) {\t};
-    \node[font=\tpSmall,text=tpmuted,text width=2.6cm,align=center,anchor=north] at (\x,4.9) {\d};}
+  \draw[tpborderhi,line width=1.2pt] (1.25,3.15) -- (1.25,7.55);
+  \foreach \i/\t/\d in {1/El problema/{Qué se quiere predecir y por qué},2/Los datos/{Tres colecciones de Tecfield},3/El corpus/{Una fila por desvío, sin fugas},4/Los modelos/{Árbol de decisión, Random Forest y XGBoost},5/Resultados/{MAE, RMSE e importancia de variables}}{%
+    \pgfmathsetmacro{\y}{3.15+(\i-1)*1.1}
+    \num{1.25}{\y}{\i}
+    \node[anchor=west,font=\bfseries\tpHthree,text=tpink] at (1.85,\y) {\t};
+    \node[anchor=west,font=\tpBody,text=tpmuted] at (5.2,\y) {\d};
+    \ifnum\i<5\draw[tpborder,line width=0.5pt] (1.85,\y+0.55) -- (15.1,\y+0.55);\fi}
 \end{lamina}
 \note{\g{intro}{mapa}}
 \end{frame}
@@ -131,26 +132,25 @@
 \begin{frame}
 \tpsec{El problema}{}
 \begin{lamina}
-  \eyebrow{0.9}{1.3}{Objetivo}
-  \pbig{0.9}{1.6}{Una \hl{regresión}}
-  \node[txt,text=tpmuted] at (0.9,2.75) {\lab{No hay etiquetas del motivo}};
-  \foreach \t [count=\i from 0] in {Falla de GPS,Hoja de ruta mal configurada,Vehículo mal asignado,Recorrido distinto}{%
-    \li[tpdim]{0.9}{3.15+\i*0.38}{6}{\tpSmall\color{tpdim}\sout{\t}}}
-  \node[txt,text=tpok] at (8.2,2.75) {\lab{Lo que sí queda registrado}};
-  \tx{8.2}{3.1}{6.9}{{\bfseries\tpHthree Cuánto duró el desvío}\par\vspace{2pt}{\tpSmall\color{tpmuted}Última lectura $-$ primera, en segundos.}}
-  \draw[tpok,line width=1.4pt] (8.4,4.45) -- (14.5,4.45);
-  \fill[tpbad] (8.4,4.45) circle (0.09); \fill[tpbad] (14.5,4.45) circle (0.09);
-  \node[anchor=north west,text=tpmuted,font=\ttfamily\tpTiny] at (8.2,4.65) {PRIMER PING};
-  \node[anchor=north east,text=tpmuted,font=\ttfamily\tpTiny] at (14.7,4.65) {ÚLTIMO PING};
-  \draw[tpborder,line width=0.6pt] (0.9,5.35) -- (15.1,5.35);
-  \tx{0.9}{5.7}{6.3}{\lab{Entrada · en \T}\par\vspace{3pt}{\tpSmall\color{tpmuted}Solo lo que se sabe hasta ese momento}\par\vspace{5pt}\chip{Primer ping}\ \chip{Hoja de ruta}\ \chip{Rastreo previo}}
-  \draw[flecha] (7.4,6.3) -- (8.2,6.3);
-  \node[fill=tpnavy,rounded corners=6pt,minimum width=1.5cm,minimum height=1.3cm,text=white,align=center,font=\bfseries\tpSmall] at (9.0,6.3) {$f(x)$\\[-1pt]{\mdseries\tpTiny Modelo}};
-  \draw[flecha] (9.8,6.3) -- (10.6,6.3);
-  \tx{10.85}{5.7}{4.3}{\lab{Salida}\par\vspace{3pt}{\bfseries\tpBody Duración del desvío}\par\vspace{3pt}{\bfseries\tpHthree\hl{¿?} segundos}}
-  \tx{0.9}{7.65}{14.2}{\tpBody\textbf{\hl{Alerta temprana:}} en el primer ping, estimar cuánto va a durar.}
+  \eyebrow{0.9}{1.3}{Objetivo · una regresión}
+  \pbig{0.9}{1.6}{Predecir cuánto va a \hl{durar} el desvío}
+  \tx{0.9}{2.75}{14.2}{\tpHthree En el instante \hl{\T}, con la información disponible hasta ese momento, estimar la duración del desvío en segundos.}
+  \node[txt,text=tpblue] at (0.9,3.95) {\lab{Entrada · lo que se sabe en \T}};
+  \li{0.9}{4.4}{6.0}{\tpSmall\textbf{Primer ping:} distancia, velocidad, posición y hora.}
+  \li{0.9}{4.9}{6.0}{\tpSmall\textbf{Hoja de ruta:} obra, tipo de hoja y recorrido.}
+  \li{0.9}{5.4}{6.0}{\tpSmall\textbf{Rastreo previo:} GPS de los 10 min anteriores.}
+  \draw[flecha] (7.3,4.95) -- (8.1,4.95);
+  \node[fill=tpnavy,rounded corners=6pt,minimum width=1.5cm,minimum height=1.3cm,text=white,align=center,font=\bfseries\tpSmall] at (8.9,4.95) {$f(x)$\\[-1pt]{\mdseries\tpTiny Modelo}};
+  \draw[flecha] (9.7,4.95) -- (10.5,4.95);
+  \tx{10.75}{4.25}{4.4}{\lab{Salida}\par\vspace{3pt}{\bfseries\tpHthree Duración del desvío}\par\vspace{2pt}{\tpSmall\color{tpmuted}en segundos}}
+  \draw[tpborder,line width=0.6pt] (0.9,6.3) -- (15.1,6.3);
+  \tx{0.9}{6.65}{6.3}{\textcolor{tpok}{\lab{Cómo se mide la duración}}\par\vspace{3pt}\tpSmall Última lectura menos primera lectura de cada evento de desvío.}
+  \draw[tpok,line width=1.4pt] (8.4,7.0) -- (14.5,7.0);
+  \fill[tpbad] (8.4,7.0) circle (0.09); \fill[tpbad] (14.5,7.0) circle (0.09);
+  \node[anchor=north west,text=tpmuted,font=\ttfamily\tpTiny] at (8.2,7.2) {PRIMER PING (\T)};
+  \node[anchor=north east,text=tpmuted,font=\ttfamily\tpTiny] at (14.7,7.2) {ÚLTIMO PING};
 \end{lamina}
-\note{\g{problema}{etiquetas} \g{problema}{objetivo}}
+\note{\g{problema}{objetivo} \g{problema}{medida}}
 \end{frame}
 
 % =====================================================================
