@@ -33,6 +33,17 @@
 % Ítem de lista sobre el fondo: \li[color]{x}{y}{ancho}{texto}
 \newcommand{\li}[5][tpblue]{\fill[#1] (#2+0.07,#3+0.16) circle (0.065);
   \node[txt,text width=#4cm] at (#2+0.35,#3) {#5};}
+% Tabla tipo base de datos: \dbtabla{x}{y}{ancho}{nombre}{campo/tipo,...}
+\newcommand{\dbtabla}[5]{%
+  \path[fill=tpnavy,rounded corners=3pt] (#1,#2) rectangle (#1+#3,#2+0.48);
+  \node[anchor=west,text=white,font=\ttfamily\bfseries\tpSmall] at (#1+0.15,#2+0.24) {#4};
+  \node[anchor=east,text=white!70,font=\ttfamily\tpTiny] at (#1+#3-0.15,#2+0.24) {tipo};
+  \foreach \c/\t [count=\i from 0] in {#5}{%
+    \pgfmathsetmacro{\yy}{#2+0.48+\i*0.36}
+    \ifodd\i\def\fil{tpsky!55}\else\def\fil{tpcard}\fi
+    \path[fill=\fil,draw=tpborder,line width=0.4pt] (#1,\yy) rectangle (#1+#3,\yy+0.36);
+    \node[anchor=west,text=tptext,font=\ttfamily\tpSmall] at (#1+0.15,\yy+0.18) {\c};
+    \node[anchor=east,text=tpdim,font=\ttfamily\tpTiny] at (#1+#3-0.15,\yy+0.18) {\t};}}
 
 % Ruta con desvío (diagrama del problema). \rutaplot{x}{y}{escala}
 \newcommand{\rutapath}{(0,2.7) .. controls (1.2,2.8) and (2.0,1.7) .. (3.6,1.6) .. controls (5.2,1.5) and (5.9,0.6) .. (7.8,0.4)}
@@ -232,13 +243,11 @@
 \begin{lamina}
   \eyebrow{0.9}{1.3}{Atributos candidatos · todos se conocen en \T}
   \pbig{0.9}{1.6}{Los atributos vienen de \hl{tres lugares}}
-  \tx{0.9}{3.4}{4.4}{{\color{tpblue}\bfseries\tpHone 1}\par\vspace{2pt}{\bfseries\tpHthree Primer ping}\par\vspace{2pt}{\tpSmall\color{tpmuted}Lo que mide el primer GPS fuera de ruta}\par\vspace{7pt}
-    \chip{distancia\_m}\ \chip{velocidad}\ \chip{velocidad\_vacia}\ \chip{ruta\_cercana}\ \chip{lat}\ \chip{lon}\ \chip{hora}\ \chip{dia\_semana}\ \chip{franja}}
-  \tx{5.75}{3.4}{4.4}{{\color{tpblue}\bfseries\tpHone 2}\par\vspace{2pt}{\bfseries\tpHthree Hoja de ruta}\par\vspace{2pt}{\tpSmall\color{tpmuted}Lo que dice la hoja del viaje}\par\vspace{7pt}
-    \chip{tipoVehiculo}\ \chip{tipoHDR}\ \chip{obra\_id}\ \chip{km\_ida}\ \chip{min\_ida}\ \chip{plazas}\ \chip{pasajeros}\ \chip{hoja\_vigente}}
-  \tx{10.6}{3.4}{4.4}{{\color{tpblue}\bfseries\tpHone 3}\par\vspace{2pt}{\bfseries\tpHthree Rastreo previo}\par\vspace{2pt}{\tpSmall\color{tpmuted}Qué hizo en los 10 min anteriores}\par\vspace{7pt}
-    \chip{gps\_previos}\ \chip{vel\_media\_previa}\ \chip{vel\_ultima}\ \chip{min\_desde\_ultimo\_gps}\ \chip{desplaz\_previo\_m}\ \chip{rumbo\_previo}}
-  \draw[tpborder,line width=0.6pt] (5.45,3.4) -- (5.45,6.6) (10.3,3.4) -- (10.3,6.6);
+  \foreach \x/\n/\t/\d in {0.9/1/Primer ping/{Lo que mide el primer GPS fuera de ruta},5.75/2/Hoja de ruta/{Lo que dice la hoja del viaje},10.6/3/Rastreo previo/{Qué hizo en los 10 min anteriores}}{%
+    \tx{\x}{2.75}{4.4}{{\color{tpblue}\bfseries\tpHthree\n}\ \ {\bfseries\tpHthree\t}\par\vspace{2pt}{\tpSmall\color{tpmuted}\d}}}
+  \dbtabla{0.9}{3.7}{4.4}{primer\_ping}{distancia\_m/float,velocidad/float,velocidad\_vacia/bool,ruta\_cercana/cat,lat/float,lon/float,hora/int,dia\_semana/int,franja/cat}
+  \dbtabla{5.75}{3.7}{4.4}{hoja\_de\_ruta}{tipoVehiculo/cat,tipoHDR/cat,obra\_id/cat,km\_ida/float,min\_ida/float,plazas/int,pasajeros/int,hoja\_vigente/bool}
+  \dbtabla{10.6}{3.7}{4.4}{rastreo\_previo}{gps\_previos/int,vel\_media\_previa/float,vel\_ultima/float,min\_desde\_ultimo\_gps/float,desplaz\_previo\_m/float,rumbo\_previo/float}
 \end{lamina}
 \note{\g{atributos}{grupos} \g{atributos}{ping} \g{atributos}{hoja} \g{atributos}{previo}}
 \end{frame}
@@ -472,17 +481,15 @@
 \begin{lamina}
   \node[align=center,text=tpblue] at (8,1.5) {\lab{Conclusión}};
   \node[align=center,text=tpink,text width=14cm] at (8,2.6) {\bfseries\tpHone Le ganan a la mediana,\\[2pt]\hl{pero por poco}};
-  \draw[tpok,line width=2pt] (0.9,4.0) -- (0.9,6.6);
-  \tx{1.15}{4.0}{4.2}{{\bfseries\tpHthree\color{tpok}Hay señal}\par\vspace{4pt}\tpSmall Los tres modelos bajan el error: de 32,1 a 27,0 minutos de MAE (16 \%). El peso está en el tipo de hoja y en el primer ping.}
-  \draw[tpwarn,line width=2pt] (5.75,4.0) -- (5.75,6.6);
-  \tx{6.0}{4.0}{4.2}{{\bfseries\tpHthree\color{tpwarn}Falta mejorar}\par\vspace{4pt}\tpSmall El error sigue siendo grande, y en el 42 \% de los eventos no hay GPS previo.}
-  \draw[tpblue,line width=2pt] (10.6,4.0) -- (10.6,6.6);
-  \tx{10.85}{4.0}{4.2}{{\bfseries\tpHthree\color{tpblue}Lo que sigue}\par\vspace{4pt}\tpSmall Ajustar hiperparámetros, tratar los eventos de 4 h como censurados, separar desvíos cortos y largos, y confirmar con Tecfield lo de las hojas vencidas.}
+  \draw[tpok,line width=2pt] (0.9,4.0) -- (0.9,5.8);
+  \tx{1.2}{4.0}{6.3}{{\bfseries\tpHthree\color{tpok}Hay señal}\par\vspace{4pt}\tpBody Los tres modelos bajan el error: de 32,1 a 27,0 minutos de MAE (16 \%). El peso está en el tipo de hoja y en el primer ping.}
+  \draw[tpwarn,line width=2pt] (8.3,4.0) -- (8.3,5.8);
+  \tx{8.6}{4.0}{6.3}{{\bfseries\tpHthree\color{tpwarn}Con límites}\par\vspace{4pt}\tpBody El error sigue siendo grande, y en el 42 \% de los eventos no hay GPS previo antes de \T.}
   \path[fill=tpnavy,rounded corners=8pt] (0.9,7.2) rectangle (15.1,8.3);
   \node[align=center,text=white!80,font=\ttfamily\tpTiny] at (8,7.5) {\textls[60]{CÓDIGO, NOTEBOOK E INFORMES}};
   \node[align=center,text=white,font=\bfseries\tpHthree] at (8,7.9) {github.com/sebareibold/prediccion-duracion-desvios};
 \end{lamina}
-\note{\g{cierre}{conclusion} \g{cierre}{sigue}}
+\note{\g{cierre}{conclusion} \g{cierre}{repo}}
 \end{frame}
 
 \end{document}
