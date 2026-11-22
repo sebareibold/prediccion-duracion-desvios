@@ -5,7 +5,6 @@
 \expandafter\def\csname guion@intro@hook\endcsname{Un vehículo de Tecfield se sale de su ruta. Llega el primer aviso, y la pregunta es una sola: ¿cuánto va a durar este desvío?}
 \expandafter\def\csname guion@intro@tp\endcsname{Ese es nuestro trabajo práctico de Laboratorio de Inteligencia Artificial. Grupo 5: Sebastián, Bautista y Davor.}
 \expandafter\def\csname guion@intro@mapa\endcsname{Vamos a recorrer el problema, los datos, el corpus, los modelos y los resultados.}
-\expandafter\def\csname guion@intro@reparto\endcsname{Nos repartimos así: Bauti explica el corpus, Seba el árbol de decisión, y Davor el Random Forest y XGBoost.}
 
 \expandafter\def\csname guion@problema@flota\endcsname{Tecfield opera flotas que llevan personal a obras y yacimientos. Cada vehículo tiene una hoja de ruta, con el recorrido planificado.}
 \expandafter\def\csname guion@problema@detector\endcsname{Un detector compara la posición GPS contra ese recorrido. Cuando el vehículo se aleja más de 500 m, empieza a registrar lecturas de desvío. Hoy todas las alertas se atienden con la misma prioridad.}
@@ -37,7 +36,6 @@
 \expandafter\def\csname guion@atributos@ping\endcsname{Del primer ping: distancia a la ruta, velocidad, posición, hora, día y franja.}
 \expandafter\def\csname guion@atributos@hoja\endcsname{De la hoja de ruta: tipo de vehículo y de hoja, obra, largo y duración del recorrido, plazas, pasajeros, y si la hoja estaba vigente.}
 \expandafter\def\csname guion@atributos@previo\endcsname{Y del rastreo previo: cantidad de puntos, velocidad, desplazamiento y rumbo de los 10 minutos anteriores.}
-\expandafter\def\csname guion@atributos@fugas\endcsname{Y lo que no puede entrar nunca, porque sería hacer trampa: cómo terminó el desvío, cuántas lecturas tuvo, o cualquier dato posterior a T\textsubscript{0}.}
 
 \expandafter\def\csname guion@evaluacion@baseline\endcsname{Para saber si un modelo sirve, hace falta una referencia. La nuestra es la mediana: predecir siempre la misma duración, sin mirar nada. Así se equivoca, en promedio, 32,1 minutos.}
 \expandafter\def\csname guion@evaluacion@metricas\endcsname{Medimos tres métricas, en minutos. El MAE es el error absoluto medio. El error mediano es el del evento del medio. Y el RMSE, que se agregó después de la reunión con Tecfield, pesa más los errores grandes: en el ejemplo da 30 contra 22 de MAE.}
