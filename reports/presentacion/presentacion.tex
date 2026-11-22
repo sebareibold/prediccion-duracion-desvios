@@ -14,6 +14,7 @@
 \documentclass[aspectratio=169,10pt]{beamer}
 \usepackage{tema-tp}
 \input{guion}
+\newcommand{\orador}[1]{\textbf{[#1]}\par\smallskip}
 %\setbeameroption{show only notes}
 
 % ------------------------------------------------------- Ayudas de dibujo
@@ -86,7 +87,7 @@
   \node at (8,5.5) {\chipsolid{Grupo 5}\hspace{4pt}\chip{Sebastián}\hspace{4pt}\chip{Bautista}\hspace{4pt}\chip{Davor}};
   \node[text=tpdim,font=\ttfamily\tpTiny] at (8,6.05) {\textls[60]{CON TECFIELD · CURSADO 2026}};
 \end{lamina}
-\note{\g{intro}{hook} \g{intro}{tp}}
+\note{\orador{Bautista} \g{intro}{hook} \g{intro}{tp}}
 \end{frame}
 
 % =====================================================================
@@ -105,7 +106,7 @@
     \node[anchor=west,font=\tpBody,text=tpmuted] at (5.2,\y) {\d};
     \ifnum\i<5\draw[tpborder,line width=0.5pt] (1.85,\y+0.55) -- (15.1,\y+0.55);\fi}
 \end{lamina}
-\note{\g{intro}{mapa}}
+\note{\orador{Bautista} \g{intro}{mapa}}
 \end{frame}
 
 % =====================================================================
@@ -123,7 +124,7 @@
   \rutaplot{6.95}{2.75}{1.0}
   \tx{0.9}{7.35}{14.2}{\tpHthree Al primer punto fuera de ruta lo llamamos \hl{\T}. En ese instante, nadie sabe cuánto va a durar el desvío.}
 \end{lamina}
-\note{\g{problema}{flota} \g{problema}{detector} \g{problema}{t0}}
+\note{\orador{Bautista} \g{problema}{flota} \g{problema}{detector} \g{problema}{t0}}
 \end{frame}
 
 % =====================================================================
@@ -150,7 +151,7 @@
   \node[anchor=north west,text=tpmuted,font=\ttfamily\tpTiny] at (8.2,7.2) {PRIMER PING (\T)};
   \node[anchor=north east,text=tpmuted,font=\ttfamily\tpTiny] at (14.7,7.2) {ÚLTIMO PING};
 \end{lamina}
-\note{\g{problema}{objetivo} \g{problema}{medida}}
+\note{\orador{Bautista} \g{problema}{objetivo} \g{problema}{medida}}
 \end{frame}
 
 % =====================================================================
@@ -173,7 +174,7 @@
   \li[tpwarn]{8.2}{5.3}{6.4}{\tpSmall\textbf{Hojas vencidas:} el 61\,\% de los desvíos cae fuera de la vigencia de su hoja.}
   \li[tpwarn]{8.2}{6.2}{6.4}{\tpSmall\textbf{Desvíos repetidos:} un mismo punto se guarda contra varias hojas.}
 \end{lamina}
-\note{\g{datos}{tres} \g{datos}{desvios} \g{datos}{hojas} \g{datos}{rastreo} \g{datos}{trampas} \g{datos}{vigencia}}
+\note{\orador{Bautista} \g{datos}{tres} \g{datos}{desvios} \g{datos}{hojas} \g{datos}{rastreo} \g{datos}{trampas} \g{datos}{vigencia}}
 \end{frame}
 
 % =====================================================================
@@ -200,7 +201,7 @@
   \draw[tpok,line width=2pt] (8.5,6.85) -- (8.5,7.85);
   \tx{8.75}{6.85}{6.3}{\textcolor{tpok}{\lab{Sin fugas}}\par\vspace{3pt}\tpSmall Solo se usa información de \T\ o anterior. Nada del final del desvío.}
 \end{lamina}
-\note{\g{corpus}{intro} \g{corpus}{p1} \g{corpus}{p2} \g{corpus}{p3} \g{corpus}{p5} \g{corpus}{p6}}
+\note{\orador{Sebastián} \g{corpus}{intro} \g{corpus}{p1} \g{corpus}{p2} \g{corpus}{p3} \g{corpus}{p5} \g{corpus}{p6}}
 \end{frame}
 
 % =====================================================================
@@ -232,7 +233,7 @@
   \barra{5.0}{7.3}{3.47}{0.7}{tpblue}
   \node[anchor=west,text=tpink,font=\bfseries\tpHthree] at (8.75,7.65) {de \hl{556} vehículos};
 \end{lamina}
-\note{\g{embudo}{inicio} \g{embudo}{repetidos} \g{embudo}{cortos} \g{embudo}{tope} \g{embudo}{quedan}}
+\note{\orador{Sebastián} \g{embudo}{inicio} \g{embudo}{repetidos} \g{embudo}{cortos} \g{embudo}{tope} \g{embudo}{quedan}}
 \end{frame}
 
 % =====================================================================
@@ -249,7 +250,7 @@
   \dbtabla{5.75}{3.7}{4.4}{hoja\_de\_ruta}{tipoVehiculo/cat,tipoHDR/cat,obra\_id/cat,km\_ida/float,min\_ida/float,plazas/int,pasajeros/int,hoja\_vigente/bool}
   \dbtabla{10.6}{3.7}{4.4}{rastreo\_previo}{gps\_previos/int,vel\_media\_previa/float,vel\_ultima/float,min\_desde\_ultimo\_gps/float,desplaz\_previo\_m/float,rumbo\_previo/float}
 \end{lamina}
-\note{\g{atributos}{grupos} \g{atributos}{ping} \g{atributos}{hoja} \g{atributos}{previo}}
+\note{\orador{Sebastián} \g{atributos}{grupos} \g{atributos}{ping} \g{atributos}{hoja} \g{atributos}{previo}}
 \end{frame}
 
 % =====================================================================
@@ -292,7 +293,7 @@
   \draw[tpborder,line width=0.6pt] (0.9,6.6) -- (15.1,6.6);
   \tx{0.9}{6.95}{14.2}{\tpBody Contra esa referencia comparamos \textbf{tres modelos}: árbol de decisión, Random Forest y \hl{XGBoost} (nuevo).}
 \end{lamina}
-\note{\g{evaluacion}{baseline} \g{evaluacion}{metricas} \g{evaluacion}{grupos} \g{evaluacion}{tres}}
+\note{\orador{Sebastián} \g{evaluacion}{baseline} \g{evaluacion}{metricas} \g{evaluacion}{grupos} \g{evaluacion}{tres}}
 \end{frame}
 
 % =====================================================================
@@ -325,7 +326,7 @@
     {\bfseries\tpSmall\color{tpok}Ventaja}\par{\tpTiny\color{tpmuted}Se puede dibujar y explicar.}\par\vspace{6pt}
     {\bfseries\tpSmall\color{tpwarn}Límite}\par{\tpTiny\color{tpmuted}Un solo árbol es inestable: un cambio chico en los datos le cambia la estructura.}}
 \end{lamina}
-\note{\g{arbol}{real} \g{arbol}{resultado}}
+\note{\orador{Sebastián} \g{arbol}{real} \g{arbol}{resultado}}
 \end{frame}
 
 % =====================================================================
@@ -359,7 +360,7 @@
   \foreach \r in {1,3,5}{\path[fill=tpblue,opacity=0.18,rounded corners=1.5pt] (7.3,5.9+\r*0.3-0.03) rectangle (14.7,5.9+\r*0.3+0.25);}
   \foreach \c in {1,2,4}{\path[draw=tpblue,line width=0.9pt,rounded corners=3pt] (7.35+\c*1.2,5.8) rectangle (8.45+\c*1.2,7.95);}
 \end{lamina}
-\note{\g{bosque}{que} \g{bosque}{azar} \g{bosque}{promedio}}
+\note{\orador{Davor} \g{bosque}{que} \g{bosque}{azar} \g{bosque}{promedio}}
 \end{frame}
 
 % =====================================================================
@@ -385,7 +386,7 @@
   \tx{5.75}{6.45}{4.4}{\lab{Cómo lo configuramos}\par\vspace{3pt}{\ttfamily\tpTiny n\_estimators = 300\par learning\_rate = 0.05\par max\_depth = 4\par}}
   \tx{10.6}{6.45}{4.4}{\textcolor{tpwarn}{\lab{Ojo}}\par\vspace{3pt}\tpSmall Es una primera configuración: no ajustamos los parámetros.}
 \end{lamina}
-\note{\g{xgb}{que} \g{xgb}{config}}
+\note{\orador{Davor} \g{xgb}{que} \g{xgb}{config}}
 \end{frame}
 
 % =====================================================================
@@ -416,7 +417,7 @@
   \tx{10.8}{2.75}{4.3}{\lab{En los tres modelos}\par\vspace{3pt}{\bfseries\tpBody El \hl{tipo de hoja} es la variable número 1}\par\vspace{3pt}{\tpSmall\color{tpmuted}Entre el 29 y el 51 \% de la importancia. Después viene la distancia hasta la ruta.}}
   \tx{10.8}{5.6}{4.3}{\lab{Rastreo previo}\par\vspace{3pt}{\bfseries\tpBody Pesa poco: entre 3 y 10 \%}\par\vspace{3pt}{\tpSmall\color{tpmuted}Dice qué usa el modelo, no qué causa la duración.}}
 \end{lamina}
-\note{\g{importancia}{tres} \g{importancia}{rastreo}}
+\note{\orador{Davor} \g{importancia}{tres} \g{importancia}{rastreo}}
 \end{frame}
 
 % =====================================================================
@@ -442,7 +443,7 @@
     \node[anchor=west,font=\ttfamily\small\bfseries,text=tpink] at (8.45+\wr+0.15,\y+0.49) {\lr};}
   \tx{0.9}{7.45}{14.2}{\tpBody \textbf{Random Forest} baja el MAE un 16 \% respecto de la mediana y \textbf{XGBoost} un 15 \%: casi empatan (0,3 min de diferencia), con parámetros sin ajustar.}
 \end{lamina}
-\note{\g{resultados}{tabla}}
+\note{\orador{Davor} \g{resultados}{tabla}}
 \end{frame}
 
 % =====================================================================
@@ -470,7 +471,7 @@
   \node[font=\tpTiny,text=tpmuted] at (12.45,5.25) {de los eventos};
   \tx{10.1}{6.5}{4.7}{\tpSmall\textcolor{tpwarn}{$\blacksquare$}\ \textbf{Sin GPS previo:} antes de \T\ no hay ninguna lectura del vehículo.}
 \end{lamina}
-\note{\g{resultados}{grupos} \g{resultados}{porque}}
+\note{\orador{Davor} \g{resultados}{grupos} \g{resultados}{porque}}
 \end{frame}
 
 % =====================================================================
@@ -489,7 +490,7 @@
   \node[align=center,text=white!80,font=\ttfamily\tpTiny] at (8,7.5) {\textls[60]{CÓDIGO, NOTEBOOK E INFORMES}};
   \node[align=center,text=white,font=\bfseries\tpHthree] at (8,7.9) {github.com/sebareibold/prediccion-duracion-desvios};
 \end{lamina}
-\note{\g{cierre}{conclusion} \g{cierre}{repo}}
+\note{\orador{Bautista} \g{cierre}{conclusion} \g{cierre}{repo}}
 \end{frame}
 
 \end{document}
