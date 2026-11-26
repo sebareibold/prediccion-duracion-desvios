@@ -1,0 +1,109 @@
+% =====================================================================
+% tema-formal.sty · Tema de la presentación formal del TP1 (Lab. de IA, Grupo 5)
+% Fondo blanco, barra de título azul marino, pie con autores, título y número
+% de lámina. Un solo color de identidad (azul); rojo, ámbar y verde solo con
+% significado (mal / atención / bien). Compilar con pdfLaTeX.
+% =====================================================================
+\ProvidesPackage{tema-formal}
+
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[T1]{fontenc}
+\RequirePackage[spanish,es-noshorthands,es-nodecimaldot,es-tabla]{babel}
+\RequirePackage[default,semibold]{sourcesanspro}
+\RequirePackage[scale=0.88]{sourcecodepro}
+\RequirePackage[expansion=false]{microtype}
+\RequirePackage{graphicx}
+\RequirePackage{booktabs}
+\RequirePackage{array}
+\RequirePackage{tabularx}
+\RequirePackage{amsmath}
+\RequirePackage{xcolor}
+\RequirePackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,shapes.geometric,fit,backgrounds}
+
+% ------------------------------------------------------------- Colores
+\definecolor{azul}{HTML}{0A2A5E}       % identidad: barras de título, títulos
+\definecolor{azulmedio}{HTML}{2F5F9E}
+\definecolor{celeste}{HTML}{8FB3DE}
+\definecolor{celestefondo}{HTML}{EEF3FA}
+\definecolor{tinta}{HTML}{1F2937}
+\definecolor{gris}{HTML}{6B7280}
+\definecolor{grisclaro}{HTML}{D1D5DB}
+\definecolor{grisfondo}{HTML}{F5F6F8}
+\definecolor{rojo}{HTML}{B23A3A}
+\definecolor{ambar}{HTML}{C27C0E}
+\definecolor{verde}{HTML}{2E7D4F}
+
+% ------------------------------------------------------------- Beamer
+\usefonttheme{professionalfonts}
+\setbeamertemplate{navigation symbols}{}
+\setbeamercolor{normal text}{fg=tinta,bg=white}
+\setbeamercolor{structure}{fg=azul}
+\setbeamercolor{alerted text}{fg=azulmedio}
+\setbeamercolor{frametitle}{fg=white,bg=azul}
+\setbeamercolor{title}{fg=azul}
+\setbeamercolor{block title}{fg=white,bg=azul}
+\setbeamercolor{block body}{fg=tinta,bg=celestefondo}
+\setbeamercolor{block title alerted}{fg=white,bg=rojo}
+\setbeamercolor{block body alerted}{fg=tinta,bg=rojo!6}
+\setbeamercolor{block title example}{fg=white,bg=verde}
+\setbeamercolor{block body example}{fg=tinta,bg=verde!6}
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+\setbeamerfont{block title}{size=\small,series=\bfseries}
+\setbeamerfont{caption}{size=\scriptsize}
+\setbeamercolor{caption name}{fg=gris}
+\setbeamertemplate{caption}[numbered]
+\setbeamertemplate{blocks}[rounded][shadow=false]
+\setbeamertemplate{itemize items}{\raisebox{0.25ex}{\tikz\fill[azulmedio] (0,0) rectangle (0.14,0.14);}}
+\setbeamertemplate{itemize subitem}{\raisebox{0.3ex}{\tikz\fill[celeste] (0,0) circle (0.05);}}
+\setbeamertemplate{enumerate items}[square]
+\setbeamercolor{item projected}{fg=white,bg=azulmedio}
+\setbeamersize{text margin left=0.8cm,text margin right=0.8cm}
+\setlength{\parskip}{0pt}
+
+% Título de la lámina: barra azul con una línea celeste debajo
+\setbeamercolor{linea titulo}{bg=celeste}
+\setbeamertemplate{frametitle}{%
+  \nointerlineskip
+  \begin{beamercolorbox}[wd=\paperwidth,ht=0.78cm,dp=0.3cm,leftskip=0.8cm,rightskip=0.8cm]{frametitle}
+    \usebeamerfont{frametitle}\insertframetitle
+  \end{beamercolorbox}%
+  \nointerlineskip
+  \begin{beamercolorbox}[wd=\paperwidth,ht=1.2pt,dp=0pt]{linea titulo}\end{beamercolorbox}%
+  \vspace{0.05cm}}
+\setbeamertemplate{footline}{%
+  \leavevmode
+  \hbox{%
+    \begin{beamercolorbox}[wd=.40\paperwidth,ht=2.6ex,dp=1.1ex,leftskip=0.8cm]{pie autor}%
+      \usebeamerfont{pie}\insertshortauthor
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.45\paperwidth,ht=2.6ex,dp=1.1ex,center]{pie titulo}%
+      \usebeamerfont{pie}\insertshorttitle
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.15\paperwidth,ht=2.6ex,dp=1.1ex,rightskip=0.8cm]{pie numero}%
+      \hfill\usebeamerfont{pie}\insertframenumber\,/\,\inserttotalframenumber
+    \end{beamercolorbox}}}
+\setbeamercolor{pie autor}{fg=gris,bg=grisfondo}
+\setbeamercolor{pie titulo}{fg=gris,bg=grisfondo}
+\setbeamercolor{pie numero}{fg=white,bg=azul}
+\setbeamerfont{pie}{size=\tiny}
+\setbeamertemplate{section in toc}{%
+  \leavevmode\hbox to 0.9cm{\hfil\colorbox{azul}{\makebox[0.4cm]{\color{white}\bfseries\inserttocsectionnumber}}\hfil}%
+  \inserttocsection\par\vspace{2pt}}
+\setbeamertemplate{section in toc shaded}[default][35]
+\AtBeginSection[]{%
+  \begin{frame}[noframenumbering]{Contenido}
+    \tableofcontents[currentsection,hideallsubsections]
+  \end{frame}}
+
+% ------------------------------------------------------------- Ayudas
+\newcommand{\T}{\ensuremath{T_0}}
+\newcommand{\campo}[1]{{\ttfamily\detokenize{#1}}}
+\newcommand{\fuente}[1]{\par\vspace{2pt}{\tiny\color{gris}#1\par}}
+\newcommand{\dato}[2]{% cifra destacada con rótulo debajo
+  \begin{minipage}[t]{\linewidth}\centering
+    {\color{azul}\bfseries\LARGE #1}\par\vspace{1pt}
+    {\scriptsize\color{gris}#2}
+  \end{minipage}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
