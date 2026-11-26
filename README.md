@@ -35,8 +35,12 @@ predecir en ese momento (*T₀*) **cuántos segundos va a durar el desvío**, co
 │   ├── diagramas/                   modelo de datos, cómo nace un desvío, línea de tiempo
 │   └── guias/                       explicación paso a paso del corpus y de cada modelo
 ├── reports/                         entregas: primera entrega, informe de avance, plan de trabajo
+│   ├── NOTAS-ENTREGA.md             estado de la entrega final, cifras, reparto y pendientes
+│   ├── entrega/                     lo que se sube a Pedco: informes, presentación y notebook
+│   ├── overleaf/                    fuentes LaTeX de los informes y de la presentación (un zip c/u)
 │   ├── exploracion-y-corpus/        informe "Exploración y corpus" (fuente LaTeX y PDF)
-│   └── presentacion/                presentación final (Beamer, para Overleaf: .tex, tema, guion y PDF)
+│   ├── presentacion/                versión inicial de la presentación (Beamer, con guion)
+│   └── presentacion-formal/         presentación final (Beamer, gráficos con los datos reales)
 └── references/                      papers de trabajos relacionados (no se suben)
 ```
 
@@ -102,7 +106,7 @@ entrenamiento y prueba a la vez.
 | modelo | MAE (min) | error mediano (min) | mejora del MAE vs. mediana |
 |---|---|---|---|
 | Mediana (*baseline*) | 32,1 | 15,0 | — |
-| Árbol de decisión | 28,8 | 14,4 | 10 % |
+| Árbol de decisión | 28,8 | 14,3 | 10 % |
 | **Random Forest** | **27,0** | **13,0** | **16 %** |
 
 Aporte de cada grupo de atributos, sumándolos de a uno (Random Forest):

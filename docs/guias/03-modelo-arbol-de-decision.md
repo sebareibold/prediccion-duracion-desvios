@@ -38,7 +38,7 @@ eventos de entrenamiento que llegaron hasta ahí. Esa es su predicción.
 
 | MAE (min) | Error mediano (min) | Mejora del MAE vs. mediana |
 |---|---|---|
-| 28,8 | 14,4 | 10 % |
+| 28,8 | 14,3 | 10 % |
 
 ## Ventajas y límites
 
