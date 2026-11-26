@@ -323,45 +323,6 @@ def fig_hora(d):
     guardar(fig, "fig-hora")
 
 
-def fig_mapa(d):
-    lat = np.array(d["corpus"]["lat"], dtype=float)
-    lon = np.array(d["corpus"]["lon"], dtype=float)
-    ok = np.isfinite(lat) & np.isfinite(lon)
-    lat, lon = lat[ok], lon[ok]
-    # Recorte al 1-99 % para que unos pocos puntos lejanos no achiquen el mapa.
-    la0, la1 = np.quantile(lat, [0.01, 0.99])
-    lo0, lo1 = np.quantile(lon, [0.01, 0.99])
-    dentro = (lat >= la0) & (lat <= la1) & (lon >= lo0) & (lon <= lo1)
-    fig, ax = plt.subplots(figsize=(6.4 * CM, 5.2 * CM))
-    hb = ax.hexbin(lon[dentro], lat[dentro], gridsize=38, bins="log", cmap="Blues", mincnt=1,
-                   linewidths=0.1)
-    ax.set_aspect(1 / np.cos(np.radians(lat.mean())))
-    ax.set_xlabel("longitud")
-    ax.set_ylabel("latitud")
-    ax.grid(False)
-    barra = fig.colorbar(hb, ax=ax, shrink=0.8, pad=0.03)
-    barra.set_label("desvíos (escala log.)")
-    barra.outline.set_visible(False)
-    barra.ax.tick_params(labelsize=6.5)
-    guardar(fig, "fig-mapa")
-
-
-def fig_gps_previo(d):
-    g = np.array(d["corpus"]["gps_previos"])
-    tramos = [("0", g == 0), ("1", g == 1), ("2", g == 2), ("3 o más", g >= 3)]
-    fig, ax = plt.subplots(figsize=(6.4 * CM, 3.4 * CM))
-    for i, (rotulo, mascara) in enumerate(tramos):
-        p = mascara.mean() * 100
-        ax.bar(i, p, color=AMBAR if i == 0 else CELESTE, width=0.65)
-        ax.text(i, p + 1, f"{coma(p, 0)} %", ha="center", va="bottom", fontsize=7.5,
-                color=AMBAR if i == 0 else GRIS_OSCURO, fontweight="semibold" if i == 0 else "normal")
-    ax.set_xticks(range(len(tramos)), [t[0] for t in tramos])
-    ax.set_xlabel("lecturas GPS en los 10 min previos a T\u2080")
-    ax.set_ylabel("% de los desvíos")
-    ax.set_ylim(0, 55)
-    guardar(fig, "fig-gps-previo")
-
-
 def metricas(d):
     y = np.array(d["corpus"]["y"])
     filas = {}
@@ -547,7 +508,7 @@ if __name__ == "__main__":
     datos = cargar_datos("--rehacer" in sys.argv)
     estilo()
     resumen_numeros(datos)
-    for funcion in [fig_embudo, fig_duracion, fig_tipohdr, fig_hora, fig_mapa, fig_gps_previo,
+    for funcion in [fig_embudo, fig_duracion, fig_tipohdr, fig_hora,
                     fig_metricas, fig_particiones, fig_error_por_duracion, fig_real_vs_pred,
                     fig_importancia, fig_importancia_grupos, fig_ablacion]:
         funcion(datos)

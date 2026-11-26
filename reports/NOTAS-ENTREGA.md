@@ -13,7 +13,7 @@ Repositorio: https://github.com/sebareibold/prediccion-duracion-desvios
 - `informe-p1-problema-y-trabajos-relacionados.pdf`
 - `informe-p2-exploracion-y-corpus.pdf`
 - `informe-p3-modelos-y-resultados.pdf`
-- `presentacion-formal.pdf` (23 láminas): **la presentación que se usa el 26/11**
+- `presentacion-formal.pdf` (22 láminas): **la presentación que se usa el 26/11**
 - `presentacion-version-inicial.pdf` (16 láminas): primera versión, informal
 - `01_exploracion_y_modelos.py` (notebook de marimo, igual al de `notebooks/`)
 - `Notebooks e Informes.zip`: el notebook y los tres informes juntos (sin datos)
@@ -23,7 +23,7 @@ Fuentes LaTeX para Overleaf en `reports/overleaf/` (un zip por documento; compil
 ## Presentación formal (`reports/presentacion-formal/`)
 
 - `main.tex` (láminas) y `tema-formal.sty` (diseño: barra de título azul, pie con autores y número).
-- `figuras/*.pdf`: 13 gráficos hechos con los datos reales; `img/`: logos y diagrama de colecciones.
+- `figuras/*.pdf`: 11 gráficos hechos con los datos reales; `img/`: logos y diagrama de colecciones.
 - `figuras/generar_figuras.py` corre el notebook y vuelve a dibujar los gráficos
   (`.venv/Scripts/python.exe reports/presentacion-formal/figuras/generar_figuras.py`). Guarda las
   cifras intermedias en `privado/cache/` (no se sube); con `--rehacer` las recalcula (~6 min).
@@ -31,7 +31,8 @@ Fuentes LaTeX para Overleaf en `reports/overleaf/` (un zip por documento; compil
 - Compilación local con MiKTeX: el mapa de la fuente Source Sans no está activo, hay que compilar con
   `pdflatex -jobname=main "\pdfmapfile{+SourceSansThree.map}\input{main.tex}"`. En Overleaf no hace falta.
 - Criterio pedido por el grupo: textos en palabras simples y cortos; sin correos en la portada, sin
-  lámina de referencias, sin columna "qué se toma" en trabajos relacionados, sin "sin fuga de información".
+  lámina de referencias, sin columna "qué se toma" en trabajos relacionados, sin "sin fuga de información",
+  sin la lámina de ubicación y rastreo previo (el 42 % sin GPS previo se cuenta en "Aporte de cada grupo").
 - Correcciones respecto de la versión inicial: el Random Forest no sortea atributos en cada pregunta
   (con la configuración usada mira todos; solo sortea la muestra de eventos); Random Forest queda por
   debajo de XGBoost en las 5 particiones, por 0,3 min, con 1,3 min de variación entre particiones.
@@ -66,10 +67,10 @@ Fuentes LaTeX para Overleaf en `reports/overleaf/` (un zip por documento; compil
 | Orden | Quién | Láminas | Qué cuenta |
 |---|---|---|---|
 | 1º | Bautista | Portada, 1 a 6 | Índice, contexto y T₀, objetivo, trabajos relacionados, fuentes de datos, problemas de calidad |
-| 2º | Sebastián | 7 a 14 | Corpus (7 pasos), de 37.720 a 13.632 desvíos, duración, atributos, exploración, modelos, evaluación |
-| 3º | Davor | 15 a 23 y "Gracias" | Resultados, particiones, dónde se equivocan, predicción vs. real, importancia, árbol, grupos de atributos, conclusiones, limitaciones |
+| 2º | Sebastián | 7 a 13 | Corpus (7 pasos), de 37.720 a 13.632 desvíos, duración, atributos, tipo de hoja y hora, modelos, evaluación |
+| 3º | Davor | 14 a 22 y "Gracias" | Resultados, particiones, dónde se equivocan, predicción vs. real, importancia, árbol, grupos de atributos, conclusiones, limitaciones |
 
-Si la parte de Davor queda larga, Sebastián sigue con la 15 y la 16. El reparto es interno: no figura
+Si la parte de Davor queda larga, Sebastián sigue con la 14 y la 15. El reparto es interno: no figura
 en la presentación.
 
 ## Mensajes
